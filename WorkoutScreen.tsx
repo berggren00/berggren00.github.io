@@ -42,10 +42,20 @@ export function WorkoutScreen({ game, onBack }: Props) {
       return acc;
     }, {});
 
-    const handleAddSet = () => {
-      if (!selectedExerciseId || !reps || !weight) return;
-      addSet(selectedExerciseId, Number(reps), Number(weight));
-      setSelectedExerciseId('');
+    const parseNumericInput = (value: string): number =>
+      Number(value.trim().replace(',', '.'));
+
+    const handleAddSet = (e?: React.FormEvent) => {
+      e?.preventDefault();
+
+      if (!selectedExerciseId) return;
+
+      const parsedReps = parseNumericInput(reps);
+      const parsedWeight = parseNumericInput(weight);
+      if (!Number.isFinite(parsedReps) || !Number.isFinite(parsedWeight)) return;
+      if (parsedReps <= 0 || parsedWeight < 0) return;
+
+      addSet(selectedExerciseId, parsedReps, parsedWeight);
       setReps('');
       setWeight('');
     };
@@ -60,7 +70,7 @@ export function WorkoutScreen({ game, onBack }: Props) {
         </div>
 
         {/* Set logger */}
-        <section className="set-logger">
+        <form className="set-logger" onSubmit={handleAddSet}>
           <select
             className="sf-select"
             value={selectedExerciseId}
@@ -74,16 +84,22 @@ export function WorkoutScreen({ game, onBack }: Props) {
 
           <div className="set-inputs">
             <input
-              className="sf-input" type="number" placeholder="Reps"
+              className="sf-input"
+              type="text"
+              inputMode="numeric"
+              placeholder="Reps"
               value={reps} onChange={(e) => setReps(e.target.value)}
             />
             <input
-              className="sf-input" type="number" placeholder="kg"
+              className="sf-input"
+              type="text"
+              inputMode="decimal"
+              placeholder="kg"
               value={weight} onChange={(e) => setWeight(e.target.value)}
             />
-            <button className="icon-btn" onClick={handleAddSet}>+</button>
+            <button className="icon-btn" type="submit">+</button>
           </div>
-        </section>
+        </form>
 
         {/* Logged sets grouped by exercise */}
         <section className="sets-log">

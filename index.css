@@ -422,10 +422,15 @@ body {
 .set-logger { display: flex; flex-direction: column; gap: 10px; }
 
 .set-inputs {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
   gap: 8px;
+  width: 100%;
 }
-.set-inputs .sf-input { flex: 1; }
+.set-inputs .sf-input {
+  min-width: 0;
+  width: 100%;
+}
 
 .sets-log { display: flex; flex-direction: column; gap: 12px; flex: 1; overflow-y: auto; }
 
