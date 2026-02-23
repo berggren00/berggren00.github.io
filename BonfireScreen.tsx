@@ -89,8 +89,8 @@ export function BonfireScreen({ game, onNavigate }: Props) {
         }}
       >
         <div className="boss-header">
-          <span className="boss-label">WEEKLY ADVERSARY</span>
-          {boss.defeated && <span className="boss-slain">SLAIN</span>}
+          <span className="boss-label">WEEKLY BOSS</span>
+          {boss.defeated && <span className="boss-slain">BOSS VANQUISHED</span>}
         </div>
         <div className="boss-name">{boss.bossName}</div>
         <div
