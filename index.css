@@ -231,60 +231,16 @@ body {
   color: var(--ember-glow);
   letter-spacing: 0.04em;
 }
-.boss-visual {
-  position: relative;
-  width: 100%;
-  margin: 0 auto;
-  animation: boss-idle-float 4s ease-in-out infinite;
-}
-.boss-visual.dead {
-  animation: none;
-}
-.boss-smoke {
-  position: absolute;
-  inset: -22%;
-  pointer-events: none;
-  opacity: 0.08;
-  z-index: 0;
-  overflow: visible;
-}
-.boss-smoke::before,
-.boss-smoke::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border-radius: 50%;
-  filter: blur(18px);
-  will-change: transform, opacity;
-}
-.boss-smoke::before {
-  opacity: 0.1;
-  background:
-    radial-gradient(46% 36% at 20% 42%, rgba(214, 214, 214, 0.5) 0%, rgba(214, 214, 214, 0) 82%),
-    radial-gradient(42% 34% at 62% 32%, rgba(188, 188, 188, 0.42) 0%, rgba(188, 188, 188, 0) 84%),
-    radial-gradient(54% 40% at 76% 74%, rgba(170, 170, 170, 0.3) 0%, rgba(170, 170, 170, 0) 86%),
-    radial-gradient(50% 38% at 38% 78%, rgba(160, 160, 160, 0.2) 0%, rgba(160, 160, 160, 0) 88%);
-  animation: smoke-drift-near 18s linear infinite;
-}
-.boss-smoke::after {
-  opacity: 0.065;
-  background:
-    radial-gradient(58% 44% at 34% 26%, rgba(205, 205, 205, 0.32) 0%, rgba(205, 205, 205, 0) 84%),
-    radial-gradient(48% 40% at 82% 44%, rgba(176, 176, 176, 0.22) 0%, rgba(176, 176, 176, 0) 86%),
-    radial-gradient(52% 44% at 52% 82%, rgba(162, 162, 162, 0.2) 0%, rgba(162, 162, 162, 0) 88%);
-  animation: smoke-drift-far 23s linear infinite;
-}
 .boss-image-frame {
   position: relative;
   width: 100%;
-  margin: 0;
+  max-width: 320px;
+  margin: 0 auto;
   overflow: visible;
   border: none;
   border-radius: 0;
   background: transparent;
   animation: boss-enter 0.45s ease-out;
-  z-index: 1;
 }
 .boss-image {
   width: 100%;
@@ -310,21 +266,6 @@ body {
 @keyframes boss-enter {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
-}
-@keyframes boss-idle-float {
-  0% { transform: translateY(-3px); }
-  50% { transform: translateY(3px); }
-  100% { transform: translateY(-3px); }
-}
-@keyframes smoke-drift-near {
-  0% { transform: translateX(-20px) scale(1); opacity: 0.09; }
-  50% { transform: translateX(20px) scale(1.05); opacity: 0.12; }
-  100% { transform: translateX(-20px) scale(1); opacity: 0.09; }
-}
-@keyframes smoke-drift-far {
-  0% { transform: translateX(16px) scale(1.04); opacity: 0.055; }
-  50% { transform: translateX(-16px) scale(0.98); opacity: 0.08; }
-  100% { transform: translateX(16px) scale(1.04); opacity: 0.055; }
 }
 @keyframes boss-hit {
   0% { transform: translateX(0); }
