@@ -66,7 +66,7 @@ body {
 
 .screen-container.bonfire-static {
   overflow: hidden;
-  padding: 8px 16px calc(var(--tab-h) + var(--safe-bottom) + 12px);
+  padding: 10px 14px calc(var(--tab-h) + var(--safe-bottom) + 10px);
 }
 
 /* ─── Tabs ────────────────────────────────────────────────────────────────── */
@@ -283,12 +283,16 @@ body {
 .boss-track { height: 10px; }
 
 .attr-alert {
+  appearance: none;
+  background: none;
+  width: 100%;
   font-size: 12px;
   color: var(--gold);
   border: 1px solid var(--gold-dim);
   padding: 8px 12px;
   cursor: pointer;
   text-align: center;
+  font-family: var(--font-title);
   letter-spacing: 0.05em;
   animation: flicker 2s ease-in-out infinite;
 }
@@ -316,6 +320,7 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  pointer-events: none;
 }
 .xp-toast.double {
   border-color: var(--gold);
@@ -727,21 +732,23 @@ body {
 .screen-container.bonfire-static .bonfire-screen {
   height: 100%;
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 6px;
+  width: min(100%, 420px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: clamp(6px, 1.2dvh, 12px);
 }
 
 .screen-container.bonfire-static .bonfire-top {
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto auto;
-  align-content: center;
-  gap: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 0.9dvh, 8px);
 }
 
 .screen-container.bonfire-static .bonfire-header {
-  padding-bottom: 4px;
+  padding-bottom: clamp(4px, 0.9dvh, 10px);
 }
 
 .screen-container.bonfire-static .level-badge {
@@ -750,17 +757,17 @@ body {
 }
 
 .screen-container.bonfire-static .player-name {
-  font-size: 17px;
+  font-size: clamp(18px, 2.9dvh, 22px);
   margin-bottom: 2px;
 }
 
 .screen-container.bonfire-static .streak-display {
-  font-size: 12px;
+  font-size: clamp(11px, 1.7dvh, 14px);
   gap: 4px;
 }
 
 .screen-container.bonfire-static .streak-count {
-  font-size: 14px;
+  font-size: clamp(14px, 2.3dvh, 18px);
 }
 
 .screen-container.bonfire-static .xp-section {
@@ -773,55 +780,63 @@ body {
 
 .screen-container.bonfire-static .boss-section {
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
-  gap: 3px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(4px, 0.9dvh, 8px);
+  text-align: center;
+  width: 100%;
 }
 
 .screen-container.bonfire-static .boss-name {
-  font-size: 16px;
+  font-size: clamp(15px, 2.4dvh, 19px);
 }
 
 .screen-container.bonfire-static .boss-image-frame {
-  width: 100%;
-  max-width: none;
+  width: min(100%, clamp(160px, 34dvh, 260px));
+  max-width: 100%;
+  max-height: clamp(180px, 38dvh, 420px);
   min-height: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .screen-container.bonfire-static .boss-image {
   width: auto;
   max-width: 100%;
-  height: 100%;
-  max-height: none;
+  height: auto;
+  max-height: 100%;
   object-fit: contain;
 }
 
 .screen-container.bonfire-static .boss-hp-label {
   font-size: 12px;
+  width: 100%;
 }
 
 .screen-container.bonfire-static .boss-track {
   height: 8px;
+  width: 100%;
 }
 
 .screen-container.bonfire-static .attr-alert {
   font-size: 11px;
   padding: 6px 10px;
+  width: 100%;
 }
 
 .screen-container.bonfire-static .bonfire-actions {
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto auto;
-  gap: 6px;
-  align-content: end;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 1dvh, 10px);
+  margin-top: auto;
 }
 
 .screen-container.bonfire-static .cta-button {
-  padding: 9px;
-  font-size: 10px;
+  padding: 10px;
+  font-size: 11px;
   letter-spacing: 0.18em;
 }
 
@@ -830,8 +845,71 @@ body {
 }
 
 .screen-container.bonfire-static .data-section .ghost-btn {
-  padding: 7px;
+  padding: 8px;
   font-size: 9px;
+}
+
+@media (max-height: 700px) {
+  .screen-container.bonfire-static {
+    padding-top: 8px;
+    padding-bottom: calc(var(--tab-h) + var(--safe-bottom) + 8px);
+  }
+
+  .screen-container.bonfire-static .bonfire-screen {
+    gap: 6px;
+  }
+
+  .screen-container.bonfire-static .bonfire-header {
+    padding-bottom: 4px;
+  }
+
+  .screen-container.bonfire-static .player-name {
+    font-size: 17px;
+  }
+
+  .screen-container.bonfire-static .streak-display {
+    font-size: 11px;
+  }
+
+  .screen-container.bonfire-static .streak-count {
+    font-size: 14px;
+  }
+
+  .screen-container.bonfire-static .xp-bar-label {
+    font-size: 8px;
+  }
+
+  .screen-container.bonfire-static .boss-name {
+    font-size: 14px;
+  }
+
+  .screen-container.bonfire-static .boss-image-frame {
+    width: min(100%, 180px);
+    max-height: 30dvh;
+  }
+
+  .screen-container.bonfire-static .boss-hp-label {
+    font-size: 11px;
+  }
+
+  .screen-container.bonfire-static .boss-track {
+    height: 7px;
+  }
+
+  .screen-container.bonfire-static .attr-alert {
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+
+  .screen-container.bonfire-static .cta-button {
+    padding: 8px;
+    font-size: 10px;
+  }
+
+  .screen-container.bonfire-static .data-section .ghost-btn {
+    padding: 6px;
+    font-size: 8px;
+  }
 }
 
 /* ─── Empty state ─────────────────────────────────────────────────────────── */

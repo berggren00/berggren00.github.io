@@ -92,9 +92,9 @@ export function BonfireScreen({ game, onNavigate }: Props) {
           />
         </div>
         {player.attributePoints > 0 && (
-          <div className="attr-alert" onClick={() => onNavigate('character')}>
+          <button type="button" className="attr-alert" onClick={() => onNavigate('character')}>
             {player.attributePoints} attribute point{player.attributePoints > 1 ? 's' : ''} unspent
-          </div>
+          </button>
         )}
       </section>
 
