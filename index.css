@@ -265,7 +265,7 @@ body {
   border: none;
   border-radius: 0;
   background: transparent;
-  animation: boss-enter 0.45s ease-out;
+  animation: boss-enter 0.45s ease-out, boss-idle-float 4s ease-in-out infinite;
 }
 .boss-image {
   width: 100%;
@@ -273,19 +273,46 @@ body {
   height: auto;
   object-fit: contain;
   display: block;
+  position: relative;
+  z-index: 1;
+}
+.boss-image-frame::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 92%;
+  height: 88%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 50% 46%, rgba(255, 176, 92, 0.52) 0%, rgba(255, 140, 70, 0.34) 38%, rgba(255, 110, 46, 0.14) 58%, rgba(255, 92, 34, 0) 78%);
+  filter: blur(24px);
+  opacity: 0.2;
+  pointer-events: none;
+  z-index: 0;
+  animation: boss-aura-pulse 7s ease-in-out infinite;
 }
 .boss-image-frame::after {
   content: '';
   position: absolute;
-  inset: 0;
-  background: rgba(212, 56, 13, 0);
+  left: 50%;
+  bottom: 10px;
+  width: 58%;
+  height: 18px;
+  transform: translateX(-50%) scale(0.95);
+  transform-origin: center;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.28) 0%, rgba(0, 0, 0, 0.18) 45%, rgba(0, 0, 0, 0) 76%);
+  filter: blur(6px);
+  opacity: 0.24;
   pointer-events: none;
+  z-index: 0;
+  animation: boss-shadow-pulse 4s ease-in-out infinite;
+  animation-delay: 0.2s;
 }
 .boss-image-frame.hit {
   animation: boss-hit 0.22s ease-in-out;
 }
-.boss-image-frame.hit::after {
-  animation: boss-hit-flash 0.22s ease-in-out;
+.boss-image-frame.hit::before {
+  animation: boss-aura-pulse 7s ease-in-out infinite, boss-hit-flash 0.22s ease-in-out;
 }
 .boss-image-frame.dead {
   animation: boss-death 0.55s ease-in forwards;
@@ -293,6 +320,21 @@ body {
 @keyframes boss-enter {
   from { opacity: 0; transform: scale(0.96); }
   to { opacity: 1; transform: scale(1); }
+}
+@keyframes boss-idle-float {
+  0% { transform: translateY(-3px); }
+  50% { transform: translateY(3px); }
+  100% { transform: translateY(-3px); }
+}
+@keyframes boss-shadow-pulse {
+  0% { transform: translateX(-50%) scale(0.95); opacity: 0.24; }
+  62% { transform: translateX(-50%) scale(1.05); opacity: 0.34; }
+  100% { transform: translateX(-50%) scale(0.95); opacity: 0.24; }
+}
+@keyframes boss-aura-pulse {
+  0% { opacity: 0.2; }
+  50% { opacity: 0.34; }
+  100% { opacity: 0.2; }
 }
 @keyframes boss-hit {
   0% { transform: translateX(0); }
@@ -302,9 +344,9 @@ body {
   100% { transform: translateX(0); }
 }
 @keyframes boss-hit-flash {
-  0% { background: rgba(212, 56, 13, 0); }
-  50% { background: rgba(212, 56, 13, 0.32); }
-  100% { background: rgba(212, 56, 13, 0); }
+  0% { opacity: 0.2; }
+  50% { opacity: 0.32; }
+  100% { opacity: 0.2; }
 }
 @keyframes boss-death {
   from { opacity: 1; transform: scale(1); }
