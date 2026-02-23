@@ -728,47 +728,54 @@ body {
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
-  gap: 8px;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.screen-container.bonfire-static .bonfire-top {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto;
+  align-content: center;
+  gap: 2px;
 }
 
 .screen-container.bonfire-static .bonfire-header {
-  padding-bottom: 8px;
+  padding-bottom: 4px;
 }
 
 .screen-container.bonfire-static .level-badge {
-  font-size: 10px;
-  margin-bottom: 2px;
+  font-size: 9px;
+  margin-bottom: 0;
 }
 
 .screen-container.bonfire-static .player-name {
-  font-size: 20px;
-  margin-bottom: 4px;
+  font-size: 17px;
+  margin-bottom: 2px;
 }
 
 .screen-container.bonfire-static .streak-display {
-  font-size: 13px;
-}
-
-.screen-container.bonfire-static .streak-count {
-  font-size: 16px;
-}
-
-.screen-container.bonfire-static .streak-label {
   font-size: 12px;
-}
-
-.screen-container.bonfire-static .xp-section {
   gap: 4px;
 }
 
+.screen-container.bonfire-static .streak-count {
+  font-size: 14px;
+}
+
+.screen-container.bonfire-static .xp-section {
+  gap: 3px;
+}
+
 .screen-container.bonfire-static .xp-bar-label {
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .screen-container.bonfire-static .boss-section {
   min-height: 0;
-  gap: 4px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+  gap: 3px;
 }
 
 .screen-container.bonfire-static .boss-name {
@@ -776,15 +783,19 @@ body {
 }
 
 .screen-container.bonfire-static .boss-image-frame {
-  display: flex;
-  justify-content: center;
-  max-width: 220px;
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  display: grid;
+  place-items: center;
 }
 
 .screen-container.bonfire-static .boss-image {
   width: auto;
   max-width: 100%;
-  max-height: min(25dvh, 220px);
+  height: 100%;
+  max-height: none;
+  object-fit: contain;
 }
 
 .screen-container.bonfire-static .boss-hp-label {
@@ -800,9 +811,17 @@ body {
   padding: 6px 10px;
 }
 
+.screen-container.bonfire-static .bonfire-actions {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto;
+  gap: 6px;
+  align-content: end;
+}
+
 .screen-container.bonfire-static .cta-button {
-  padding: 10px;
-  font-size: 11px;
+  padding: 9px;
+  font-size: 10px;
   letter-spacing: 0.18em;
 }
 
@@ -811,7 +830,7 @@ body {
 }
 
 .screen-container.bonfire-static .data-section .ghost-btn {
-  padding: 8px;
+  padding: 7px;
   font-size: 9px;
 }
 
