@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { UseGameReturn } from './useGame';
 import { getLevelProgress, xpRequired } from './gameEngine';
 import { bossHPPercent } from './bossEngine';
@@ -11,11 +11,25 @@ interface Props {
 export function BonfireScreen({ game, onNavigate }: Props) {
   const { player, boss, lastXPGain, doubleXPTriggered, exportSave, importSave } = game;
   const [importing, setImporting] = useState(false);
+  const [bossHit, setBossHit] = useState(false);
+  const previousBossHP = useRef<number | null>(null);
 
   if (!player || !boss) return null;
 
   const progress = getLevelProgress(player);
   const bossHP = bossHPPercent(boss);
+
+  useEffect(() => {
+    const prev = previousBossHP.current;
+    previousBossHP.current = boss.currentHP;
+
+    if (prev === null) return;
+    if (boss.currentHP >= prev || boss.currentHP <= 0) return;
+
+    setBossHit(true);
+    const timer = window.setTimeout(() => setBossHit(false), 260);
+    return () => window.clearTimeout(timer);
+  }, [boss.currentHP]);
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -63,6 +77,12 @@ export function BonfireScreen({ game, onNavigate }: Props) {
           {boss.defeated && <span className="boss-slain">SLAIN</span>}
         </div>
         <div className="boss-name">{boss.bossName}</div>
+        <div
+          key={boss.id}
+          className={`boss-image-frame ${bossHit ? 'hit' : ''} ${boss.currentHP <= 0 ? 'dead' : ''}`}
+        >
+          <img className="boss-image" src={boss.imageUrl} alt={boss.bossName} />
+        </div>
         <div className="boss-hp-label">
           <span>{boss.defeated ? 0 : boss.currentHP.toLocaleString()} / {boss.maxHP.toLocaleString()} HP</span>
           <span>{bossHP}%</span>

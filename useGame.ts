@@ -12,7 +12,7 @@ import {
   applyXP, spendAttributePoint, computeNewStreak, graceCharges,
 } from './gameEngine';
 import {
-  getISOWeekId, createBossWeek, applyDamageToBoss, bossDefeatBadge,
+  getISOWeekId, createBossWeek, applyDamageToBoss, bossDefeatBadge, withBossImage,
 } from './bossEngine';
 
 function todayISO(): string {
@@ -81,6 +81,8 @@ export function useGame(): UseGameReturn {
       const weekId = getISOWeekId(new Date());
       let b = await getBossWeek(weekId);
       if (!b) { b = createBossWeek(); await saveBossWeek(b); }
+      b = withBossImage(b);
+      await saveBossWeek(b);
       setBoss(b);
 
       const [exs, tmpls, whs] = await Promise.all([

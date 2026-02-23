@@ -8,6 +8,18 @@ const BOSS_NAMES = [
   'The Undying Sentinel', 'Lord of Cinders', 'The Sunken Dread', 'Phantom Arbiter',
 ];
 
+const BOSS_IMAGES = [
+  '/bosses/boss1.png',
+  '/bosses/boss2.png',
+  '/bosses/boss3.png',
+];
+
+function deterministicIndex(input: string, length: number): number {
+  let hash = 0;
+  for (const ch of input) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return hash % length;
+}
+
 export function getISOWeekId(date: Date): string {
   const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const day = d.getUTCDay() || 7;
@@ -26,9 +38,16 @@ export function getMondayOfWeek(date: Date): string {
 }
 
 function deterministicBossName(weekId: string): string {
-  let hash = 0;
-  for (const ch of weekId) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return BOSS_NAMES[hash % BOSS_NAMES.length];
+  return BOSS_NAMES[deterministicIndex(weekId, BOSS_NAMES.length)];
+}
+
+export function bossImageForWeek(weekId: string): string {
+  return BOSS_IMAGES[deterministicIndex(weekId, BOSS_IMAGES.length)];
+}
+
+export function withBossImage(boss: BossWeek): BossWeek {
+  if (boss.imageUrl) return boss;
+  return { ...boss, imageUrl: bossImageForWeek(boss.id) };
 }
 
 export function createBossWeek(date: Date = new Date()): BossWeek {
@@ -36,6 +55,7 @@ export function createBossWeek(date: Date = new Date()): BossWeek {
   return {
     id,
     bossName: deterministicBossName(id),
+    imageUrl: bossImageForWeek(id),
     maxHP: BOSS_MAX_HP,
     currentHP: BOSS_MAX_HP,
     startDate: getMondayOfWeek(date),

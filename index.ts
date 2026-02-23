@@ -67,6 +67,7 @@ export interface PlayerState {
 export interface BossWeek {
   id: string;           // ISO week string e.g. "2025-W03"
   bossName: string;
+  imageUrl: string;     // local asset path (e.g. "/bosses/boss1.png")
   maxHP: number;
   currentHP: number;
   startDate: string;    // Monday ISO date
