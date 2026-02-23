@@ -124,11 +124,24 @@ body {
 }
 
 /* ─── Bonfire ─────────────────────────────────────────────────────────────── */
+.bonfire-screen {
+  height: 100%;
+  min-height: 0;
+  justify-content: flex-start;
+  gap: 12px;
+}
+.bonfire-screen > .bonfire-header,
+.bonfire-screen > .xp-section,
+.bonfire-screen > .cta-button,
+.bonfire-screen > .data-section {
+  flex-shrink: 0;
+}
 .bonfire-header {
   text-align: center;
   border-bottom: 1px solid var(--border);
   padding-bottom: 20px;
 }
+.bonfire-header-compact { padding-bottom: 12px; }
 .level-badge {
   font-family: var(--font-title);
   font-size: 11px;
@@ -205,7 +218,14 @@ body {
 }
 
 /* ─── Boss ────────────────────────────────────────────────────────────────── */
-.boss-section { display: flex; flex-direction: column; gap: 8px; }
+.boss-section {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 8px;
+}
 .boss-header {
   display: flex;
   justify-content: space-between;
@@ -234,8 +254,13 @@ body {
 .boss-image-frame {
   position: relative;
   width: 100%;
-  max-width: 320px;
+  max-width: min(100%, 270px);
   margin: 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   overflow: visible;
   border: none;
   border-radius: 0;
@@ -244,7 +269,9 @@ body {
 }
 .boss-image {
   width: 100%;
+  max-height: clamp(150px, 34dvh, 280px);
   height: auto;
+  object-fit: contain;
   display: block;
 }
 .boss-image-frame::after {
@@ -288,10 +315,12 @@ body {
   justify-content: space-between;
   font-size: 13px;
   color: var(--text-dim);
+  flex-shrink: 0;
 }
 .boss-track {
   height: 10px;
   position: relative;
+  flex-shrink: 0;
 }
 .boss-track .bar-fill {
   position: absolute;
@@ -309,9 +338,49 @@ body {
   letter-spacing: 0.05em;
   animation: flicker 2s ease-in-out infinite;
 }
+.attr-alert-slot {
+  min-height: 34px;
+  flex-shrink: 0;
+}
 @keyframes flicker {
   0%, 90%, 100% { opacity: 1; }
   95% { opacity: 0.5; }
+}
+
+@media (max-width: 430px) and (orientation: portrait) {
+  .screen-container {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .bonfire-screen {
+    gap: 10px;
+  }
+
+  .player-name {
+    font-size: clamp(20px, 6vw, 24px);
+    margin-bottom: 6px;
+  }
+
+  .streak-display {
+    font-size: clamp(13px, 4vw, 15px);
+  }
+
+  .streak-count {
+    font-size: clamp(17px, 5vw, 20px);
+  }
+
+  .boss-section {
+    gap: 6px;
+  }
+
+  .boss-name {
+    font-size: clamp(16px, 5vw, 20px);
+  }
+
+  .boss-image {
+    max-height: clamp(120px, 30svh, 230px);
+  }
 }
 
 /* ─── XP Toast ────────────────────────────────────────────────────────────── */
