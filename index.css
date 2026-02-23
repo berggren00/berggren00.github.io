@@ -64,11 +64,6 @@ body {
   touch-action: pan-y;
 }
 
-.screen-container.bonfire-static {
-  overflow: hidden;
-  padding: 8px 16px calc(var(--tab-h) + var(--safe-bottom) + 12px);
-}
-
 /* ─── Tabs ────────────────────────────────────────────────────────────────── */
 .tab-bar {
   position: fixed;
@@ -723,97 +718,6 @@ body {
 
 /* ─── Data section ────────────────────────────────────────────────────────── */
 .data-section { display: flex; gap: 10px; }
-
-.screen-container.bonfire-static .bonfire-screen {
-  height: 100%;
-  min-height: 0;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
-  gap: 8px;
-}
-
-.screen-container.bonfire-static .bonfire-header {
-  padding-bottom: 8px;
-}
-
-.screen-container.bonfire-static .level-badge {
-  font-size: 10px;
-  margin-bottom: 2px;
-}
-
-.screen-container.bonfire-static .player-name {
-  font-size: 20px;
-  margin-bottom: 4px;
-}
-
-.screen-container.bonfire-static .streak-display {
-  font-size: 13px;
-}
-
-.screen-container.bonfire-static .streak-count {
-  font-size: 16px;
-}
-
-.screen-container.bonfire-static .streak-label {
-  font-size: 12px;
-}
-
-.screen-container.bonfire-static .xp-section {
-  gap: 4px;
-}
-
-.screen-container.bonfire-static .xp-bar-label {
-  font-size: 10px;
-}
-
-.screen-container.bonfire-static .boss-section {
-  min-height: 0;
-  gap: 4px;
-}
-
-.screen-container.bonfire-static .boss-name {
-  font-size: 16px;
-}
-
-.screen-container.bonfire-static .boss-image-frame {
-  display: flex;
-  justify-content: center;
-  max-width: 220px;
-}
-
-.screen-container.bonfire-static .boss-image {
-  width: auto;
-  max-width: 100%;
-  max-height: min(25dvh, 220px);
-}
-
-.screen-container.bonfire-static .boss-hp-label {
-  font-size: 12px;
-}
-
-.screen-container.bonfire-static .boss-track {
-  height: 8px;
-}
-
-.screen-container.bonfire-static .attr-alert {
-  font-size: 11px;
-  padding: 6px 10px;
-}
-
-.screen-container.bonfire-static .cta-button {
-  padding: 10px;
-  font-size: 11px;
-  letter-spacing: 0.18em;
-}
-
-.screen-container.bonfire-static .data-section {
-  gap: 8px;
-}
-
-.screen-container.bonfire-static .data-section .ghost-btn {
-  padding: 8px;
-  font-size: 9px;
-}
 
 /* ─── Empty state ─────────────────────────────────────────────────────────── */
 .empty-hint {
