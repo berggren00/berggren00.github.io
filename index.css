@@ -728,54 +728,47 @@ body {
   height: 100%;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 6px;
-}
-
-.screen-container.bonfire-static .bonfire-top {
-  min-height: 0;
-  display: grid;
-  grid-template-rows: auto auto;
-  align-content: center;
-  gap: 2px;
+  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  gap: 8px;
 }
 
 .screen-container.bonfire-static .bonfire-header {
-  padding-bottom: 4px;
+  padding-bottom: 8px;
 }
 
 .screen-container.bonfire-static .level-badge {
-  font-size: 9px;
-  margin-bottom: 0;
-}
-
-.screen-container.bonfire-static .player-name {
-  font-size: 17px;
+  font-size: 10px;
   margin-bottom: 2px;
 }
 
+.screen-container.bonfire-static .player-name {
+  font-size: 20px;
+  margin-bottom: 4px;
+}
+
 .screen-container.bonfire-static .streak-display {
-  font-size: 12px;
-  gap: 4px;
+  font-size: 13px;
 }
 
 .screen-container.bonfire-static .streak-count {
-  font-size: 14px;
+  font-size: 16px;
+}
+
+.screen-container.bonfire-static .streak-label {
+  font-size: 12px;
 }
 
 .screen-container.bonfire-static .xp-section {
-  gap: 3px;
+  gap: 4px;
 }
 
 .screen-container.bonfire-static .xp-bar-label {
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .screen-container.bonfire-static .boss-section {
   min-height: 0;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
-  gap: 3px;
+  gap: 4px;
 }
 
 .screen-container.bonfire-static .boss-name {
@@ -783,19 +776,15 @@ body {
 }
 
 .screen-container.bonfire-static .boss-image-frame {
-  width: 100%;
-  max-width: none;
-  min-height: 0;
-  display: grid;
-  place-items: center;
+  display: flex;
+  justify-content: center;
+  max-width: 220px;
 }
 
 .screen-container.bonfire-static .boss-image {
   width: auto;
   max-width: 100%;
-  height: 100%;
-  max-height: none;
-  object-fit: contain;
+  max-height: min(25dvh, 220px);
 }
 
 .screen-container.bonfire-static .boss-hp-label {
@@ -811,17 +800,9 @@ body {
   padding: 6px 10px;
 }
 
-.screen-container.bonfire-static .bonfire-actions {
-  min-height: 0;
-  display: grid;
-  grid-template-rows: auto auto;
-  gap: 6px;
-  align-content: end;
-}
-
 .screen-container.bonfire-static .cta-button {
-  padding: 9px;
-  font-size: 10px;
+  padding: 10px;
+  font-size: 11px;
   letter-spacing: 0.18em;
 }
 
@@ -830,7 +811,7 @@ body {
 }
 
 .screen-container.bonfire-static .data-section .ghost-btn {
-  padding: 7px;
+  padding: 8px;
   font-size: 9px;
 }
 
