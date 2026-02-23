@@ -142,20 +142,25 @@ export function BonfireScreen({ game, onNavigate }: Props) {
         </div>
         <div className="boss-name">{boss.bossName}</div>
         <div
-          key={boss.id}
-          className={`boss-image-frame ${bossHit ? 'hit' : ''} ${boss.currentHP <= 0 ? 'dead' : ''}`}
+          className={`boss-visual ${boss.currentHP <= 0 ? 'dead' : ''}`}
           style={{ maxWidth: 'min(100%, 270px)' }}
         >
-          <img
-            className="boss-image"
-            src={boss.imageUrl}
-            alt={boss.bossName}
-            style={{
-              maxHeight: 'min(40vh, 280px)',
-              width: '100%',
-              objectFit: 'contain',
-            }}
-          />
+          <div className="boss-smoke" aria-hidden="true" />
+          <div
+            key={boss.id}
+            className={`boss-image-frame ${bossHit ? 'hit' : ''} ${boss.currentHP <= 0 ? 'dead' : ''}`}
+          >
+            <img
+              className="boss-image"
+              src={boss.imageUrl}
+              alt={boss.bossName}
+              style={{
+                maxHeight: 'min(40vh, 280px)',
+                width: '100%',
+                objectFit: 'contain',
+              }}
+            />
+          </div>
         </div>
         <div className="boss-hp-label">
           <span>{boss.defeated ? 0 : boss.currentHP.toLocaleString()} / {boss.maxHP.toLocaleString()} HP</span>
