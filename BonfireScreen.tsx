@@ -39,7 +39,15 @@ export function BonfireScreen({ game, onNavigate }: Props) {
   };
 
   return (
-    <div className="screen bonfire-screen">
+    <div
+      className="screen bonfire-screen"
+      style={{
+        height: '100%',
+        overflow: 'hidden',
+        justifyContent: 'space-between',
+        gap: '12px',
+      }}
+    >
       {/* XP Toast */}
       {lastXPGain !== null && (
         <div className={`xp-toast ${doubleXPTriggered ? 'double' : ''}`}>
@@ -49,7 +57,7 @@ export function BonfireScreen({ game, onNavigate }: Props) {
       )}
 
       {/* Player header */}
-      <header className="bonfire-header">
+      <header className="bonfire-header" style={{ paddingBottom: '12px' }}>
         <div className="level-badge">LVL {player.level}</div>
         <div className="player-name">Undead Warrior</div>
         <div className="streak-display">
@@ -60,7 +68,7 @@ export function BonfireScreen({ game, onNavigate }: Props) {
       </header>
 
       {/* XP Bar */}
-      <section className="xp-section">
+      <section className="xp-section" style={{ flexShrink: 0 }}>
         <div className="xp-bar-label">
           <span>EXPERIENCE</span>
           <span>{player.currentXP} / {xpRequired(player.level)}</span>
@@ -71,7 +79,15 @@ export function BonfireScreen({ game, onNavigate }: Props) {
       </section>
 
       {/* Boss Section */}
-      <section className="boss-section">
+      <section
+        className="boss-section"
+        style={{
+          flex: '1 1 auto',
+          minHeight: 0,
+          justifyContent: 'center',
+          gap: '8px',
+        }}
+      >
         <div className="boss-header">
           <span className="boss-label">WEEKLY ADVERSARY</span>
           {boss.defeated && <span className="boss-slain">SLAIN</span>}
@@ -80,8 +96,18 @@ export function BonfireScreen({ game, onNavigate }: Props) {
         <div
           key={boss.id}
           className={`boss-image-frame ${bossHit ? 'hit' : ''} ${boss.currentHP <= 0 ? 'dead' : ''}`}
+          style={{ maxWidth: 'min(100%, 270px)' }}
         >
-          <img className="boss-image" src={boss.imageUrl} alt={boss.bossName} />
+          <img
+            className="boss-image"
+            src={boss.imageUrl}
+            alt={boss.bossName}
+            style={{
+              maxHeight: 'min(40vh, 280px)',
+              width: '100%',
+              objectFit: 'contain',
+            }}
+          />
         </div>
         <div className="boss-hp-label">
           <span>{boss.defeated ? 0 : boss.currentHP.toLocaleString()} / {boss.maxHP.toLocaleString()} HP</span>
@@ -101,12 +127,16 @@ export function BonfireScreen({ game, onNavigate }: Props) {
       </section>
 
       {/* CTA */}
-      <button className="cta-button" onClick={() => onNavigate('workout')}>
+      <button
+        className="cta-button"
+        style={{ flexShrink: 0, paddingTop: '12px', paddingBottom: '12px' }}
+        onClick={() => onNavigate('workout')}
+      >
         ⚔ BEGIN TRIAL
       </button>
 
       {/* Data management */}
-      <section className="data-section">
+      <section className="data-section" style={{ flexShrink: 0 }}>
         <button className="ghost-btn" onClick={exportSave}>Export Save</button>
         <label className={`ghost-btn ${importing ? 'loading' : ''}`}>
           {importing ? 'Importing...' : 'Import Save'}
