@@ -34,7 +34,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <div className="screen-container">
+      <div className={`screen-container ${activeTab === 'bonfire' ? 'bonfire-static' : ''}`}>
         {activeTab === 'bonfire' && (
           <BonfireScreen game={game} onNavigate={(tab) => setActiveTab(tab)} />
         )}
