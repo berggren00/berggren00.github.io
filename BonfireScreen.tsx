@@ -12,7 +12,12 @@ export function BonfireScreen({ game, onNavigate }: Props) {
   const { player, boss, lastXPGain, doubleXPTriggered, exportSave, importSave } = game;
   const [importing, setImporting] = useState(false);
   const [bossHit, setBossHit] = useState(false);
-  const previousBossHP = useRef<number | null>(null);
+  const [bossLagHP, setBossLagHP] = useState(100);
+  const [bossLagAnimating, setBossLagAnimating] = useState(false);
+  const previousBossHPForHit = useRef<number | null>(null);
+  const previousBossHPForLag = useRef<number | null>(null);
+  const lagDelayTimerRef = useRef<number | null>(null);
+  const lagAnimFrameRef = useRef<number | null>(null);
 
   if (!player || !boss) return null;
 
@@ -20,8 +25,8 @@ export function BonfireScreen({ game, onNavigate }: Props) {
   const bossHP = bossHPPercent(boss);
 
   useEffect(() => {
-    const prev = previousBossHP.current;
-    previousBossHP.current = boss.currentHP;
+    const prev = previousBossHPForHit.current;
+    previousBossHPForHit.current = boss.currentHP;
 
     if (prev === null) return;
     if (boss.currentHP >= prev || boss.currentHP <= 0) return;
@@ -30,6 +35,49 @@ export function BonfireScreen({ game, onNavigate }: Props) {
     const timer = window.setTimeout(() => setBossHit(false), 260);
     return () => window.clearTimeout(timer);
   }, [boss.currentHP]);
+
+  useEffect(() => {
+    const prev = previousBossHPForLag.current;
+    previousBossHPForLag.current = bossHP;
+
+    if (lagDelayTimerRef.current !== null) {
+      window.clearTimeout(lagDelayTimerRef.current);
+      lagDelayTimerRef.current = null;
+    }
+    if (lagAnimFrameRef.current !== null) {
+      window.cancelAnimationFrame(lagAnimFrameRef.current);
+      lagAnimFrameRef.current = null;
+    }
+
+    if (prev === null) {
+      setBossLagAnimating(false);
+      setBossLagHP(bossHP);
+      return;
+    }
+
+    if (bossHP < prev) {
+      setBossLagAnimating(false);
+      setBossLagHP(prev);
+      lagDelayTimerRef.current = window.setTimeout(() => {
+        setBossLagAnimating(true);
+        lagAnimFrameRef.current = window.requestAnimationFrame(() => {
+          setBossLagHP(bossHP);
+          lagAnimFrameRef.current = null;
+        });
+      }, 300);
+      return;
+    }
+
+    setBossLagAnimating(false);
+    setBossLagHP(bossHP);
+  }, [bossHP]);
+
+  useEffect(() => {
+    return () => {
+      if (lagDelayTimerRef.current !== null) window.clearTimeout(lagDelayTimerRef.current);
+      if (lagAnimFrameRef.current !== null) window.cancelAnimationFrame(lagAnimFrameRef.current);
+    };
+  }, []);
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -114,6 +162,10 @@ export function BonfireScreen({ game, onNavigate }: Props) {
           <span>{bossHP}%</span>
         </div>
         <div className="bar-track boss-track">
+          <div
+            className={`bar-fill boss-lag-fill ${bossLagAnimating ? 'animating' : ''}`}
+            style={{ width: `${boss.defeated ? 0 : bossLagHP}%` }}
+          />
           <div
             className={`bar-fill boss-fill ${bossHP < 25 ? 'critical' : bossHP < 50 ? 'low' : ''}`}
             style={{ width: `${boss.defeated ? 0 : bossHP}%` }}

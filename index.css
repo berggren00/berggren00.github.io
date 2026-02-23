@@ -179,11 +179,25 @@ body {
   transition: width 0.6s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .xp-fill { background: linear-gradient(90deg, var(--soul) 0%, #8ab4f8 100%); }
-.boss-fill { background: linear-gradient(90deg, var(--ember) 0%, #ff6b35 100%); }
+.boss-fill {
+  background: linear-gradient(90deg, var(--ember) 0%, #ff6b35 100%);
+  transition: none;
+  position: relative;
+  z-index: 2;
+}
 .boss-fill.low { background: linear-gradient(90deg, #d4380d 0%, #ff3b00 100%); }
 .boss-fill.critical {
   background: linear-gradient(90deg, #8b0000 0%, #d4380d 100%);
   animation: pulse-critical 1.2s ease-in-out infinite;
+}
+.boss-lag-fill {
+  background: linear-gradient(90deg, #2d0707 0%, #471010 100%);
+  transition: none;
+  position: relative;
+  z-index: 1;
+}
+.boss-lag-fill.animating {
+  transition: width 0.4s cubic-bezier(0.25, 1, 0.5, 1);
 }
 @keyframes pulse-critical {
   0%, 100% { opacity: 1; }
@@ -275,7 +289,15 @@ body {
   font-size: 13px;
   color: var(--text-dim);
 }
-.boss-track { height: 10px; }
+.boss-track {
+  height: 10px;
+  position: relative;
+}
+.boss-track .bar-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
 
 .attr-alert {
   font-size: 12px;
