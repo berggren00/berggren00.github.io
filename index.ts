@@ -99,6 +99,25 @@ export interface ExerciseRecord {
   bestWorkoutId?: string;
 }
 
+export interface ResolutionTemplateSummary {
+  templateId: string;
+  templateName: string;
+  exercises: Array<{
+    exerciseId: string;
+    exerciseName: string;
+    sets: string[];
+  }>;
+}
+
+export interface WorkoutResolutionPayload {
+  workoutName: string;
+  totalSets: number;
+  totalVolume: number;
+  committedDamage: number;
+  sessionXp: number;
+  templateSummaries: ResolutionTemplateSummary[];
+}
+
 export interface BossWeek {
   id: string;           // ISO week string e.g. "2025-W03"
   bossName: string;

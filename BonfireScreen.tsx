@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { UseGameReturn } from './useGame';
+import type { WorkoutResolutionPayload } from './index';
 import { getLevelProgress, xpRequired } from './gameEngine';
 import { bossHPPercent } from './bossEngine';
 
@@ -9,15 +10,24 @@ interface Props {
 }
 
 export function BonfireScreen({ game, onNavigate }: Props) {
-  const { player, boss, lastXPGain, doubleXPTriggered, exportSave, importSave } = game;
+  const {
+    player, boss, lastXPGain, doubleXPTriggered,
+    pendingResolution, clearPendingResolution,
+    exportSave, importSave,
+  } = game;
   const [importing, setImporting] = useState(false);
   const [bossHit, setBossHit] = useState(false);
+  const [bossBarImpact, setBossBarImpact] = useState<'none' | 'minor' | 'major'>('none');
   const [bossLagHP, setBossLagHP] = useState(100);
   const [bossLagAnimating, setBossLagAnimating] = useState(false);
+  const [visibleResolution, setVisibleResolution] = useState<WorkoutResolutionPayload | null>(null);
   const previousBossHPForHit = useRef<number | null>(null);
   const previousBossHPForLag = useRef<number | null>(null);
   const lagDelayTimerRef = useRef<number | null>(null);
   const lagAnimFrameRef = useRef<number | null>(null);
+  const resolutionTimerRef = useRef<number | null>(null);
+  const bossBarImpactTimerRef = useRef<number | null>(null);
+  const commitImpactAnimFrameRef = useRef<number | null>(null);
 
   if (!player || !boss) return null;
 
@@ -30,11 +40,19 @@ export function BonfireScreen({ game, onNavigate }: Props) {
 
     if (prev === null) return;
     if (boss.currentHP >= prev || boss.currentHP <= 0) return;
+    const delta = prev - boss.currentHP;
+    const deltaPct = boss.maxHP > 0 ? (delta / boss.maxHP) * 100 : 0;
 
     setBossHit(true);
+    setBossBarImpact(deltaPct >= 6 ? 'major' : 'minor');
     const timer = window.setTimeout(() => setBossHit(false), 260);
+    if (bossBarImpactTimerRef.current !== null) window.clearTimeout(bossBarImpactTimerRef.current);
+    bossBarImpactTimerRef.current = window.setTimeout(() => {
+      setBossBarImpact('none');
+      bossBarImpactTimerRef.current = null;
+    }, 900);
     return () => window.clearTimeout(timer);
-  }, [boss.currentHP]);
+  }, [boss.currentHP, boss.maxHP]);
 
   useEffect(() => {
     const prev = previousBossHPForLag.current;
@@ -76,8 +94,49 @@ export function BonfireScreen({ game, onNavigate }: Props) {
     return () => {
       if (lagDelayTimerRef.current !== null) window.clearTimeout(lagDelayTimerRef.current);
       if (lagAnimFrameRef.current !== null) window.cancelAnimationFrame(lagAnimFrameRef.current);
+      if (resolutionTimerRef.current !== null) window.clearTimeout(resolutionTimerRef.current);
+      if (bossBarImpactTimerRef.current !== null) window.clearTimeout(bossBarImpactTimerRef.current);
+      if (commitImpactAnimFrameRef.current !== null) window.cancelAnimationFrame(commitImpactAnimFrameRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (resolutionTimerRef.current !== null) {
+      window.clearTimeout(resolutionTimerRef.current);
+      resolutionTimerRef.current = null;
+    }
+    if (!pendingResolution) {
+      setVisibleResolution(null);
+      return;
+    }
+    // Explicitly trigger a visible commit-impact effect when returning from End Workout.
+    const committedPct = boss.maxHP > 0 ? (pendingResolution.committedDamage / boss.maxHP) * 100 : 0;
+    const impactType = committedPct >= 6 ? 'major' : 'minor';
+    setBossBarImpact(impactType);
+    setBossHit(true);
+    if (bossBarImpactTimerRef.current !== null) window.clearTimeout(bossBarImpactTimerRef.current);
+    bossBarImpactTimerRef.current = window.setTimeout(() => {
+      setBossBarImpact('none');
+      setBossHit(false);
+      bossBarImpactTimerRef.current = null;
+    }, 1400);
+
+    // Force a lag-bar travel even when Bonfire mounts after HP has already changed.
+    const startLag = Math.min(100, bossHP + committedPct);
+    setBossLagAnimating(false);
+    setBossLagHP(startLag);
+    if (commitImpactAnimFrameRef.current !== null) window.cancelAnimationFrame(commitImpactAnimFrameRef.current);
+    commitImpactAnimFrameRef.current = window.requestAnimationFrame(() => {
+      setBossLagAnimating(true);
+      setBossLagHP(bossHP);
+      commitImpactAnimFrameRef.current = null;
+    });
+
+    resolutionTimerRef.current = window.setTimeout(() => {
+      setVisibleResolution(pendingResolution);
+      resolutionTimerRef.current = null;
+    }, 1600);
+  }, [pendingResolution, boss.maxHP, bossHP]);
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -131,7 +190,7 @@ export function BonfireScreen({ game, onNavigate }: Props) {
           <span>{boss.defeated ? 0 : boss.currentHP.toLocaleString()} / {boss.maxHP.toLocaleString()} HP</span>
           <span>{bossHP}%</span>
         </div>
-        <div className="bar-track boss-track">
+        <div className={`bar-track boss-track ${bossBarImpact === 'major' ? 'impact-major' : bossBarImpact === 'minor' ? 'impact-minor' : ''}`}>
           <div
             className={`bar-fill boss-lag-fill ${bossLagAnimating ? 'animating' : ''}`}
             style={{ width: `${boss.defeated ? 0 : bossLagHP}%` }}
@@ -165,6 +224,70 @@ export function BonfireScreen({ game, onNavigate }: Props) {
           <input type="file" accept=".json" onChange={handleImport} hidden />
         </label>
       </section>
+
+      {visibleResolution && (
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Trial resolved summary">
+          <section className="modal-card resolution-modal-card">
+            <div className="modal-header">
+              <h3>TRIAL RESOLVED</h3>
+              <button
+                className="remove-btn"
+                type="button"
+                onClick={() => {
+                  setVisibleResolution(null);
+                  clearPendingResolution();
+                }}
+              >
+                X
+              </button>
+            </div>
+            <div className="section-label">{visibleResolution.workoutName.toUpperCase()}</div>
+            <div className="memory-row"><span>Total Sets</span><b>{visibleResolution.totalSets}</b></div>
+            <h3 className="resolution-title">BOSS DAMAGE</h3>
+            <div className="memory-row"><span>Committed</span><b>{visibleResolution.committedDamage.toLocaleString()}</b></div>
+            <div className="memory-row"><span>Session XP</span><b>+{visibleResolution.sessionXp}</b></div>
+            <div className="memory-row">
+              <span>Workout XP</span>
+              <b>+{(lastXPGain ?? Math.max(0, Math.round(visibleResolution.totalVolume * 0.12))).toLocaleString()}</b>
+            </div>
+            <h3 className="resolution-title">WORKOUT SUMMARY</h3>
+            {visibleResolution.templateSummaries.map((templateSummary) => (
+              <div key={templateSummary.templateId} className="resolution-template-block">
+                <div className="resolution-template-title">{templateSummary.templateName}</div>
+                {templateSummary.exercises.length > 0 && (
+                  <div className="resolution-ex-head">
+                    <span>Exercise</span>
+                    <span>Sets</span>
+                  </div>
+                )}
+                {templateSummary.exercises.map((exerciseSummary) => (
+                  <div key={`${templateSummary.templateId}-${exerciseSummary.exerciseId}`} className="resolution-ex-row">
+                    <span>{exerciseSummary.exerciseName}:</span>
+                    <div className="resolution-set-list">
+                      {exerciseSummary.sets.map((setText, i) => (
+                        <b key={`${exerciseSummary.exerciseId}-${i}`} className="resolution-set-chip">{setText}</b>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {templateSummary.exercises.length === 0 && (
+                  <p className="empty-hint">No sets logged for this template.</p>
+                )}
+              </div>
+            ))}
+            <button
+              className="cta-button"
+              type="button"
+              onClick={() => {
+                setVisibleResolution(null);
+                clearPendingResolution();
+              }}
+            >
+              Continue
+            </button>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

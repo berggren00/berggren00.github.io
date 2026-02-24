@@ -9,6 +9,7 @@ import type {
   DraftKey,
   DraftValue,
   ExerciseRecord,
+  WorkoutResolutionPayload,
 } from './index';
 import {
   getPlayer, savePlayer, getAllExercises, saveExercise,
@@ -91,6 +92,7 @@ export interface UseGameReturn {
   doubleXPTriggered: boolean;
   inscribingId: string | null;
   exerciseRecords: Record<string, ExerciseRecord>;
+  pendingResolution: WorkoutResolutionPayload | null;
 
   // Player actions
   spendStat: (attr: keyof PlayerState['attributes']) => Promise<void>;
@@ -116,6 +118,8 @@ export interface UseGameReturn {
   // Data
   exportSave: () => Promise<void>;
   importSave: (file: File) => Promise<void>;
+  setPendingResolution: (payload: WorkoutResolutionPayload | null) => void;
+  clearPendingResolution: () => void;
 }
 
 export function useGame(): UseGameReturn {
@@ -129,6 +133,7 @@ export function useGame(): UseGameReturn {
   const [lastXPGain, setLastXPGain] = useState<number | null>(null);
   const [doubleXPTriggered, setDoubleXPTriggered] = useState(false);
   const [inscribingId, setInscribingId] = useState<string | null>(null);
+  const [pendingResolution, setPendingResolutionState] = useState<WorkoutResolutionPayload | null>(null);
   const [drafts, setDrafts] = useState<Record<string, DraftValue>>({});
   const activeRef = useRef<Workout | null>(null);
   const inscribeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -479,14 +484,22 @@ export function useGame(): UseGameReturn {
     window.location.reload();
   }, []);
 
+  const setPendingResolution = useCallback((payload: WorkoutResolutionPayload | null) => {
+    setPendingResolutionState(payload);
+  }, []);
+
+  const clearPendingResolution = useCallback(() => {
+    setPendingResolutionState(null);
+  }, []);
+
   const exerciseRecords = player?.exerciseRecords ?? {};
 
   return {
     player, boss, exercises, templates, activeWorkout,
-    workoutHistory, loading, lastXPGain, doubleXPTriggered, inscribingId, exerciseRecords,
+    workoutHistory, loading, lastXPGain, doubleXPTriggered, inscribingId, exerciseRecords, pendingResolution,
     spendStat, addExercise, addTemplate, removeTemplate,
     startTrialWithTemplates, setActiveTemplate, addSet, removeSet,
     getDraft, setDraft, clearDraft, completeWorkout, cancelWorkout,
-    exportSave, importSave,
+    exportSave, importSave, setPendingResolution, clearPendingResolution,
   };
 }

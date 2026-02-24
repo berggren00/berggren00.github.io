@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import type { DraftKey } from './index';
+import type { DraftKey, WorkoutResolutionPayload } from './index';
 import type { UseGameReturn } from './useGame';
+import { calculateDamage } from './gameEngine';
+import { BossHUD } from './BossHUD';
 
 interface Props {
   game: UseGameReturn;
@@ -23,13 +25,19 @@ function formatWeightDisplay(weight: number): string {
   return String(rounded).replace(/(\.\d*?[1-9])0+$/, '$1');
 }
 
+function smallXpFromSet(reps: number, weight: number): number {
+  const raw = Math.round(reps * weight * 0.02);
+  return Math.max(2, Math.min(20, raw));
+}
+
 export function WorkoutScreen({ game, onBack }: Props) {
   const {
+    boss,
     exercises, templates, activeWorkout, workoutHistory,
     addExercise, addTemplate, removeTemplate,
     startTrialWithTemplates, setActiveTemplate,
     addSet, removeSet, getDraft, setDraft,
-    completeWorkout, cancelWorkout, inscribingId,
+    completeWorkout, cancelWorkout, inscribingId, setPendingResolution,
   } = game;
 
   const [view, setView] = useState<'menu' | 'chooseTemplates' | 'newTemplate' | 'addExercise'>('menu');
@@ -50,6 +58,12 @@ export function WorkoutScreen({ game, onBack }: Props) {
   const [exCategory, setExCategory] = useState<'compound' | 'isolation' | 'tempo'>('compound');
   const [buttonEffectOn, setButtonEffectOn] = useState(false);
   const buttonEffectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [sessionXp, setSessionXp] = useState(0);
+  const [sessionDamage, setSessionDamage] = useState(0);
+  const [lastHitDamage, setLastHitDamage] = useState(0);
+  const [lastHitPercent, setLastHitPercent] = useState(0);
+  const [hitNonce, setHitNonce] = useState(0);
+  const [isEndingWorkout, setIsEndingWorkout] = useState(false);
 
   const selectedTemplateIds = activeWorkout?.selectedTemplateIds ?? [];
   const activeTemplateId = activeWorkout?.activeTemplateId ?? null;
@@ -68,6 +82,16 @@ export function WorkoutScreen({ game, onBack }: Props) {
   useEffect(() => () => {
     if (buttonEffectTimeoutRef.current) clearTimeout(buttonEffectTimeoutRef.current);
   }, []);
+
+  useEffect(() => {
+    if (!activeWorkout) return;
+    setSessionXp(0);
+    setSessionDamage(0);
+    setLastHitDamage(0);
+    setLastHitPercent(0);
+    setHitNonce(0);
+    setIsEndingWorkout(false);
+  }, [activeWorkout?.id]);
 
   const handleInscribeExercise = async () => {
     const trimmed = exName.trim();
@@ -104,18 +128,70 @@ export function WorkoutScreen({ game, onBack }: Props) {
 
   const handleAddSet = (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!selectedExerciseId || !draftKey) return;
+    if (!selectedExerciseId || !draftKey || !activeWorkout || !boss) return;
 
     const parsedReps = parseNumericInput(reps);
     const parsedWeight = parseNumericInput(weight);
     if (!Number.isFinite(parsedReps) || !Number.isFinite(parsedWeight)) return;
     if (parsedReps <= 0 || parsedWeight < 0) return;
 
+    const chipPercent = Math.random() < 0.5 ? 2 : 3;
+    const chipDamage = Math.max(1, Math.round((boss.maxHP * chipPercent) / 100));
+    const previewCap = Math.max(1, Math.floor(boss.currentHP * 0.35));
+    const nextSessionChip = Math.min(previewCap, sessionDamage + chipDamage);
+    const appliedChip = Math.max(0, nextSessionChip - sessionDamage);
+    const visualHitPercent = boss.maxHP > 0 ? (appliedChip / boss.maxHP) * 100 : chipPercent;
+
     addSet(selectedExerciseId, parsedReps, parsedWeight);
+    setSessionXp((prev) => prev + smallXpFromSet(parsedReps, parsedWeight));
+    setSessionDamage(nextSessionChip);
+    setLastHitDamage(appliedChip);
+    setLastHitPercent(visualHitPercent);
+    setHitNonce((prev) => prev + 1);
     setDraft(draftKey, { reps: '', weight: parsedWeight, updatedAt: Date.now() });
     setReps('');
     setWeight(String(parsedWeight));
     setIsSetModalOpen(false);
+  };
+
+  const handleEndWorkout = async () => {
+    if (!activeWorkout || !boss || activeWorkout.sets.length === 0 || isEndingWorkout) return;
+    const templateSummaries = activeWorkout.selectedTemplateIds.map((templateId) => {
+      const template = templates.find((t) => t.id === templateId);
+      const templateSets = activeWorkout.sets.filter((set) => set.templateId === templateId);
+      const byExercise = templateSets.reduce<Record<string, typeof templateSets>>((acc, set) => {
+        if (!acc[set.exerciseId]) acc[set.exerciseId] = [];
+        acc[set.exerciseId].push(set);
+        return acc;
+      }, {});
+      const exercisesSummary = Object.entries(byExercise).map(([exerciseId, sets]) => {
+        const exerciseName = exMap.get(exerciseId)?.name ?? 'Unknown Exercise';
+        const setEntries = sets.map((set) => `${formatWeightDisplay(set.weight)}kgx${set.reps}`);
+        return {
+          exerciseId,
+          exerciseName,
+          sets: setEntries,
+        };
+      });
+      return {
+        templateId,
+        templateName: template?.name ?? templateId,
+        exercises: exercisesSummary,
+      };
+    });
+    const summary: WorkoutResolutionPayload = {
+      workoutName: activeWorkout.name,
+      totalSets: activeWorkout.sets.length,
+      totalVolume: activeWorkout.sets.reduce((sum, s) => sum + s.reps * s.weight, 0),
+      committedDamage: Math.min(calculateDamage(activeWorkout.sets), boss.currentHP),
+      sessionXp,
+      templateSummaries,
+    };
+    setIsEndingWorkout(true);
+    await completeWorkout();
+    setPendingResolution(summary);
+    onBack();
+    setIsEndingWorkout(false);
   };
 
   // Active workout
@@ -171,6 +247,20 @@ export function WorkoutScreen({ game, onBack }: Props) {
     const lastSessionSets = lastSessionWorkout && selectedExerciseId
       ? lastSessionWorkout.sets.filter((set) => set.exerciseId === selectedExerciseId)
       : [];
+    const visibleSets = activeTemplateId
+      ? activeWorkout.sets.filter((set) => set.templateId === activeTemplateId)
+      : [];
+    const groupedSets = visibleSets.reduce<Record<string, typeof visibleSets>>((acc, set) => {
+      if (!acc[set.exerciseId]) acc[set.exerciseId] = [];
+      acc[set.exerciseId].push(set);
+      return acc;
+    }, {});
+    const persistentBossHp = boss?.currentHP ?? 0;
+    const bossMaxHp = Math.max(1, boss?.maxHP ?? 1);
+    const previewDamage = Math.min(sessionDamage, persistentBossHp);
+    const finalDamageEstimate = Math.min(calculateDamage(activeWorkout.sets), persistentBossHp);
+    const reservedFinalDamage = Math.max(0, finalDamageEstimate - previewDamage);
+    const displayBossHp = Math.max(0, persistentBossHp - previewDamage);
 
     return (
       <div className="screen workout-active">
@@ -260,6 +350,21 @@ export function WorkoutScreen({ game, onBack }: Props) {
           </section>
         )}
 
+        {boss && (
+          <BossHUD
+            bossName={boss.bossName}
+            currentHP={persistentBossHp}
+            maxHP={bossMaxHp}
+            displayHP={displayBossHp}
+            sessionChipDamage={previewDamage}
+            reservedFinalDamage={reservedFinalDamage}
+            sessionXp={sessionXp}
+            lastHitDamage={lastHitDamage}
+            lastHitPercent={lastHitPercent}
+            hitNonce={hitNonce}
+          />
+        )}
+
         {isSetModalOpen && (
           <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Log set">
             <form className="modal-card" onSubmit={handleAddSet}>
@@ -298,16 +403,36 @@ export function WorkoutScreen({ game, onBack }: Props) {
           </div>
         )}
 
+        <section className="sets-log compact-log">
+          <div className="section-label">
+            {(activeTemplate?.name ?? 'Template').toUpperCase()} - {visibleSets.length} sets
+          </div>
+          {Object.entries(groupedSets).map(([exerciseId, sets]) => (
+            <div key={exerciseId} className="exercise-group compact-group">
+              <div className="exercise-group-name">{exMap.get(exerciseId)?.name ?? 'Unknown Exercise'}</div>
+              {sets.map((set, i) => (
+                <div key={set.id} className="set-row compact-row">
+                  <span className="set-num">{i + 1}</span>
+                  <span>{set.reps} x {formatWeightDisplay(set.weight)}kg</span>
+                  <button className="remove-btn" type="button" onClick={() => removeSet(set.id)}>X</button>
+                </div>
+              ))}
+            </div>
+          ))}
+          {visibleSets.length === 0 && <p className="empty-hint">No sets logged for this template yet.</p>}
+        </section>
+
         <div className="workout-footer">
           <div className="total-volume">
             Template Volume: {activeTemplateVolume.toLocaleString()} kg | Total: {totalVolume.toLocaleString()} kg
           </div>
           <button
             className="cta-button"
-            onClick={() => { completeWorkout(); onBack(); }}
-            disabled={activeWorkout.sets.length === 0}
+            onClick={handleEndWorkout}
+            disabled={activeWorkout.sets.length === 0 || isEndingWorkout}
+            type="button"
           >
-            OFFER TO THE FLAME
+            {isEndingWorkout ? 'COMMITTING...' : 'END WORKOUT'}
           </button>
         </div>
       </div>
