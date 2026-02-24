@@ -24,6 +24,7 @@ export function WorkoutScreen({ game, onBack }: Props) {
     startTrialWithTemplates, setActiveTemplate,
     addSet, removeSet, getDraft, setDraft,
     completeWorkout, cancelWorkout, inscribingId,
+    exerciseRecords,
   } = game;
 
   const [view, setView] = useState<'menu' | 'chooseTemplates' | 'newTemplate' | 'addExercise'>('menu');
@@ -125,6 +126,12 @@ export function WorkoutScreen({ game, onBack }: Props) {
   if (activeWorkout) {
     const totalVolume = activeWorkout.sets.reduce((sum, s) => sum + s.reps * s.weight, 0);
     const activeTemplateVolume = visibleSets.reduce((sum, s) => sum + s.reps * s.weight, 0);
+    const selectedExerciseRecord = selectedExerciseId ? exerciseRecords[selectedExerciseId] : null;
+    const selectedExerciseName = selectedExerciseId ? exMap.get(selectedExerciseId)?.name ?? 'Unknown Exercise' : null;
+    const lastSessionWorkoutId = selectedExerciseRecord?.recentSets[0]?.workoutId ?? null;
+    const lastSessionSets = lastSessionWorkoutId
+      ? selectedExerciseRecord?.recentSets.filter((set) => set.workoutId === lastSessionWorkoutId) ?? []
+      : [];
 
     return (
       <div className="screen workout-active">
@@ -170,6 +177,44 @@ export function WorkoutScreen({ game, onBack }: Props) {
           </button>
         </div>
 
+        {selectedExerciseName && (
+          <section className="exercise-memory-panel">
+            <div className="section-label">MEMORY: {selectedExerciseName.toUpperCase()}</div>
+            {selectedExerciseRecord ? (
+              <>
+                <div className="memory-row">
+                  <span>Last Used</span>
+                  <b>{new Date(selectedExerciseRecord.lastUsedAt).toLocaleDateString()}</b>
+                </div>
+                <div className="memory-row">
+                  <span>PR Weight</span>
+                  <b>{selectedExerciseRecord.bestWeight.toFixed(1)} kg</b>
+                </div>
+                <div className="memory-row">
+                  <span>Best Set Volume</span>
+                  <b>{selectedExerciseRecord.bestSetVolume.toFixed(0)}</b>
+                </div>
+                <div className="memory-row">
+                  <span>Best Workout Volume</span>
+                  <b>{selectedExerciseRecord.bestWorkoutVolume.toFixed(0)}</b>
+                </div>
+                <div className="memory-subtitle">Last Session Comparison</div>
+                {lastSessionSets.map((set, i) => (
+                  <div key={`${set.workoutId}-${set.timestamp}-${i}`} className="memory-row">
+                    <span>{new Date(set.timestamp).toLocaleDateString()}</span>
+                    <b>{set.reps} x {set.weight}kg</b>
+                  </div>
+                ))}
+                {lastSessionSets.length === 0 && (
+                  <p className="empty-hint">No previous session sets for this exercise.</p>
+                )}
+              </>
+            ) : (
+              <p className="empty-hint">No history for this exercise yet.</p>
+            )}
+          </section>
+        )}
+
         {isSetModalOpen && (
           <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="Log set">
             <form className="modal-card" onSubmit={handleAddSet}>
@@ -214,7 +259,7 @@ export function WorkoutScreen({ game, onBack }: Props) {
           </div>
           {Object.entries(groupedSets).map(([exId, sets]) => (
             <div key={exId} className="exercise-group">
-              <div className="exercise-group-name">{exMap.get(exId)?.name ?? exId}</div>
+              <div className="exercise-group-name">{exMap.get(exId)?.name ?? 'Unknown Exercise'}</div>
               {sets.map((s, i) => (
                 <div key={s.id} className="set-row">
                   <span className="set-num">{i + 1}</span>

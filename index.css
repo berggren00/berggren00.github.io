@@ -658,6 +658,54 @@ body {
 
 .sets-log { display: flex; flex-direction: column; gap: 12px; flex: 1; overflow-y: auto; }
 
+.exercise-memory-panel,
+.recent-log-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border: 1px solid var(--border);
+  background: #0f0f0f;
+  padding: 10px 12px;
+}
+
+.memory-subtitle {
+  margin-top: 4px;
+  color: var(--text-dim);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  font-family: var(--font-title);
+}
+
+.memory-row,
+.recent-log-item,
+.recent-log-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.memory-row b,
+.recent-log-item b,
+.recent-log-head b {
+  font-family: var(--font-title);
+  color: var(--text);
+}
+
+.recent-log-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border: 1px solid var(--text-muted);
+  padding: 8px;
+}
+
+.recent-log-total {
+  color: var(--text-dim);
+  font-size: 12px;
+}
+
 .exercise-group { display: flex; flex-direction: column; gap: 4px; }
 .exercise-group-name {
   font-size: 11px;

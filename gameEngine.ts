@@ -232,5 +232,7 @@ export function defaultPlayer(): PlayerState {
     lastWorkoutDate: '',
     graceChargesUsed: 0,
     badges: [],
+    bestWorkoutVolume: 0,
+    exerciseRecords: {},
   };
 }

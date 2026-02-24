@@ -44,6 +44,8 @@ export interface Workout {
   completedAt?: number;
   xpAwarded?: number;
   damageDealt?: number;
+  totalVolume?: number;
+  isPersonalBest?: boolean;
 }
 
 export type DraftKey = `${string}:${string}:${string}`;
@@ -72,6 +74,26 @@ export interface PlayerState {
   lastWorkoutDate: string; // YYYY-MM-DD
   graceChargesUsed: number;
   badges: string[];
+  bestWorkoutVolume: number;
+  exerciseRecords: Record<string, ExerciseRecord>;
+}
+
+export interface ExerciseMemorySet {
+  reps: number;
+  weight: number;
+  volume: number;
+  timestamp: number;
+  workoutId: string;
+}
+
+export interface ExerciseRecord {
+  exerciseId: string;
+  lastUsedAt: number;
+  recentSets: ExerciseMemorySet[];
+  bestWeight: number;
+  bestSetVolume: number;
+  bestWorkoutVolume: number;
+  bestWorkoutId?: string;
 }
 
 export interface BossWeek {

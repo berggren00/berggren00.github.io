@@ -8,6 +8,7 @@ import type {
   WorkoutTemplate,
   DraftKey,
   DraftValue,
+  ExerciseRecord,
 } from './index';
 import {
   getPlayer, savePlayer, getAllExercises, saveExercise,
@@ -32,6 +33,17 @@ function uid(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+const MAX_RECENT_SETS_PER_EXERCISE = 5;
+
+function normalizePlayerState(player: PlayerState): PlayerState {
+  const legacy = player as PlayerState & Partial<Pick<PlayerState, 'bestWorkoutVolume' | 'exerciseRecords'>>;
+  return {
+    ...player,
+    bestWorkoutVolume: typeof legacy.bestWorkoutVolume === 'number' ? legacy.bestWorkoutVolume : 0,
+    exerciseRecords: legacy.exerciseRecords ?? {},
+  };
+}
+
 export interface UseGameReturn {
   // State
   player: PlayerState | null;
@@ -44,6 +56,7 @@ export interface UseGameReturn {
   lastXPGain: number | null;
   doubleXPTriggered: boolean;
   inscribingId: string | null;
+  exerciseRecords: Record<string, ExerciseRecord>;
 
   // Player actions
   spendStat: (attr: keyof PlayerState['attributes']) => Promise<void>;
@@ -98,7 +111,14 @@ export function useGame(): UseGameReturn {
   useEffect(() => {
     (async () => {
       let p = await getPlayer();
-      if (!p) { p = defaultPlayer(); await savePlayer(p); }
+      if (!p) {
+        p = defaultPlayer();
+        await savePlayer(p);
+      } else {
+        const normalized = normalizePlayerState(p);
+        p = normalized;
+        await savePlayer(normalized);
+      }
       setPlayer(p);
 
       const weekId = getISOWeekId(new Date());
@@ -251,14 +271,58 @@ export function useGame(): UseGameReturn {
 
     const breakdown = calculateXP(workout.sets, exercises, player, newStreakResult.streak, today);
     const damage = calculateDamage(workout.sets);
+    const totalVolume = workout.sets.reduce((sum, s) => sum + s.reps * s.weight, 0);
 
     // Level up
     const { newPlayer: playerAfterXP, levelsGained } = applyXP(player, breakdown.total);
+    const updatedExerciseRecords: Record<string, ExerciseRecord> = {
+      ...(player.exerciseRecords ?? {}),
+    };
+    const setsByExercise = workout.sets.reduce<Record<string, SetLog[]>>((acc, set) => {
+      if (!acc[set.exerciseId]) acc[set.exerciseId] = [];
+      acc[set.exerciseId].push(set);
+      return acc;
+    }, {});
+    Object.entries(setsByExercise).forEach(([exerciseId, sets]) => {
+      const existing = updatedExerciseRecords[exerciseId] ?? {
+        exerciseId,
+        lastUsedAt: 0,
+        recentSets: [],
+        bestWeight: 0,
+        bestSetVolume: 0,
+        bestWorkoutVolume: 0,
+      };
+      const topWeight = sets.reduce((m, s) => Math.max(m, s.weight), 0);
+      const topSetVolume = sets.reduce((m, s) => Math.max(m, s.reps * s.weight), 0);
+      const exerciseWorkoutVolume = sets.reduce((sum, s) => sum + s.reps * s.weight, 0);
+      const appendedRecent = sets.map((s) => ({
+        reps: s.reps,
+        weight: s.weight,
+        volume: s.reps * s.weight,
+        timestamp: s.timestamp,
+        workoutId: workout.id,
+      }));
+      const mergedRecent = [...appendedRecent, ...existing.recentSets]
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, MAX_RECENT_SETS_PER_EXERCISE);
+      updatedExerciseRecords[exerciseId] = {
+        ...existing,
+        lastUsedAt: Date.now(),
+        recentSets: mergedRecent,
+        bestWeight: Math.max(existing.bestWeight, topWeight),
+        bestSetVolume: Math.max(existing.bestSetVolume, topSetVolume),
+        bestWorkoutVolume: Math.max(existing.bestWorkoutVolume, exerciseWorkoutVolume),
+        bestWorkoutId: exerciseWorkoutVolume >= existing.bestWorkoutVolume ? workout.id : existing.bestWorkoutId,
+      };
+    });
+    const isPersonalBest = totalVolume > (player.bestWorkoutVolume ?? 0);
     const finalPlayer: PlayerState = {
       ...playerAfterXP,
       streak: newStreakResult.streak,
       lastWorkoutDate: today,
       graceChargesUsed: newStreakResult.graceChargesUsed,
+      bestWorkoutVolume: Math.max(player.bestWorkoutVolume ?? 0, totalVolume),
+      exerciseRecords: updatedExerciseRecords,
     };
 
     // Boss damage
@@ -270,6 +334,8 @@ export function useGame(): UseGameReturn {
       completedAt: Date.now(),
       xpAwarded: breakdown.total,
       damageDealt: damage,
+      totalVolume,
+      isPersonalBest,
     };
 
     // Persist
@@ -348,9 +414,11 @@ export function useGame(): UseGameReturn {
     window.location.reload();
   }, []);
 
+  const exerciseRecords = player?.exerciseRecords ?? {};
+
   return {
     player, boss, exercises, templates, activeWorkout,
-    workoutHistory, loading, lastXPGain, doubleXPTriggered, inscribingId,
+    workoutHistory, loading, lastXPGain, doubleXPTriggered, inscribingId, exerciseRecords,
     spendStat, addExercise, addTemplate, removeTemplate,
     startTrialWithTemplates, setActiveTemplate, addSet, removeSet,
     getDraft, setDraft, clearDraft, completeWorkout, cancelWorkout,
