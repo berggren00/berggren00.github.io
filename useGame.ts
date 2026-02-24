@@ -43,6 +43,7 @@ export interface UseGameReturn {
   loading: boolean;
   lastXPGain: number | null;
   doubleXPTriggered: boolean;
+  inscribingId: string | null;
 
   // Player actions
   spendStat: (attr: keyof PlayerState['attributes']) => Promise<void>;
@@ -80,9 +81,17 @@ export function useGame(): UseGameReturn {
   const [loading, setLoading] = useState(true);
   const [lastXPGain, setLastXPGain] = useState<number | null>(null);
   const [doubleXPTriggered, setDoubleXPTriggered] = useState(false);
+  const [inscribingId, setInscribingId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, DraftValue>>({});
   const activeRef = useRef<Workout | null>(null);
+  const inscribeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   activeRef.current = activeWorkout;
+
+  useEffect(() => () => {
+    if (inscribeTimeoutRef.current) {
+      clearTimeout(inscribeTimeoutRef.current);
+    }
+  }, []);
 
   // ── Bootstrap ─────────────────────────────────────────────────────────────
 
@@ -124,7 +133,10 @@ export function useGame(): UseGameReturn {
   const addExercise = useCallback(async (name: string, category: Exercise['category']): Promise<Exercise> => {
     const ex: Exercise = { id: uid(), name, category, muscleGroups: [] };
     await saveExercise(ex);
-    setExercises((prev) => [...prev, ex]);
+    setExercises((prev) => [ex, ...prev]);
+    if (inscribeTimeoutRef.current) clearTimeout(inscribeTimeoutRef.current);
+    setInscribingId(ex.id);
+    inscribeTimeoutRef.current = setTimeout(() => setInscribingId(null), 500);
     return ex;
   }, []);
 
@@ -338,7 +350,7 @@ export function useGame(): UseGameReturn {
 
   return {
     player, boss, exercises, templates, activeWorkout,
-    workoutHistory, loading, lastXPGain, doubleXPTriggered,
+    workoutHistory, loading, lastXPGain, doubleXPTriggered, inscribingId,
     spendStat, addExercise, addTemplate, removeTemplate,
     startTrialWithTemplates, setActiveTemplate, addSet, removeSet,
     getDraft, setDraft, clearDraft, completeWorkout, cancelWorkout,

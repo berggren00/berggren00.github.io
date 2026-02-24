@@ -23,7 +23,7 @@ const STAT_ICONS: Record<keyof PlayerState['attributes'], string> = {
 };
 
 export function CharacterScreen({ game }: Props) {
-  const { player, spendStat, workoutHistory } = game;
+  const { player, spendStat, workoutHistory, exercises, inscribingId } = game;
   if (!player) return null;
 
   const progress = getLevelProgress(player);
@@ -104,6 +104,18 @@ export function CharacterScreen({ game }: Props) {
           <div className="derived-item"><span>Trials Complete</span><b>{workoutHistory.length}</b></div>
           <div className="derived-item"><span>Total Volume</span><b>{totalVolume.toLocaleString()} kg</b></div>
           <div className="derived-item"><span>Badges</span><b>{player.badges.length}</b></div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-label">EXERCISE CODEX</div>
+        <div className="exercise-checklist">
+          {exercises.map((ex) => (
+            <div key={ex.id} className={`ex-check ${inscribingId === ex.id ? 'inscribing' : ''}`}>
+              <span>{ex.name} <em>[{ex.category}]</em></span>
+            </div>
+          ))}
+          {exercises.length === 0 && <p className="empty-hint">No exercises inscribed yet.</p>}
         </div>
       </section>
 

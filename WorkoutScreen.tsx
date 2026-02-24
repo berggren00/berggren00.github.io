@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { DraftKey } from './index';
 import type { UseGameReturn } from './useGame';
 
@@ -23,7 +23,7 @@ export function WorkoutScreen({ game, onBack }: Props) {
     addExercise, addTemplate, removeTemplate,
     startTrialWithTemplates, setActiveTemplate,
     addSet, removeSet, getDraft, setDraft,
-    completeWorkout, cancelWorkout,
+    completeWorkout, cancelWorkout, inscribingId,
   } = game;
 
   const [view, setView] = useState<'menu' | 'chooseTemplates' | 'newTemplate' | 'addExercise'>('menu');
@@ -42,6 +42,8 @@ export function WorkoutScreen({ game, onBack }: Props) {
   // New exercise form
   const [exName, setExName] = useState('');
   const [exCategory, setExCategory] = useState<'compound' | 'isolation' | 'tempo'>('compound');
+  const [buttonEffectOn, setButtonEffectOn] = useState(false);
+  const buttonEffectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const selectedTemplateIds = activeWorkout?.selectedTemplateIds ?? [];
   const activeTemplateId = activeWorkout?.activeTemplateId ?? null;
@@ -65,6 +67,20 @@ export function WorkoutScreen({ game, onBack }: Props) {
   const draftKey: DraftKey | null = activeWorkout && activeTemplateId && selectedExerciseId
     ? `${activeWorkout.id}:${activeTemplateId}:${selectedExerciseId}`
     : null;
+
+  useEffect(() => () => {
+    if (buttonEffectTimeoutRef.current) clearTimeout(buttonEffectTimeoutRef.current);
+  }, []);
+
+  const handleInscribeExercise = async () => {
+    const trimmed = exName.trim();
+    if (!trimmed) return;
+    await addExercise(trimmed, exCategory);
+    setExName('');
+    setButtonEffectOn(true);
+    if (buttonEffectTimeoutRef.current) clearTimeout(buttonEffectTimeoutRef.current);
+    buttonEffectTimeoutRef.current = setTimeout(() => setButtonEffectOn(false), 500);
+  };
 
   useEffect(() => {
     if (!activeWorkout) return;
@@ -246,13 +262,20 @@ export function WorkoutScreen({ game, onBack }: Props) {
             </button>
           ))}
         </div>
-        <button className="cta-button" onClick={() => {
-          if (!exName.trim()) return;
-          addExercise(exName.trim(), exCategory);
-          setExName('');
-        }}>
+        <button className={`cta-button ${buttonEffectOn ? 'inscribe-btn-active' : ''}`} onClick={handleInscribeExercise}>
           Inscribe Exercise
         </button>
+        <div className="exercise-checklist">
+          {exercises.map((ex) => (
+            <div
+              key={ex.id}
+              className={`ex-check ${inscribingId === ex.id ? 'inscribing' : ''}`}
+            >
+              <span>{ex.name} <em>[{ex.category}]</em></span>
+            </div>
+          ))}
+          {exercises.length === 0 && <p className="empty-hint">No exercises inscribed yet.</p>}
+        </div>
       </div>
     );
   }
@@ -268,7 +291,7 @@ export function WorkoutScreen({ game, onBack }: Props) {
         <input className="sf-input full" placeholder="Template name" value={tmplName} onChange={(e) => setTmplName(e.target.value)} />
         <div className="exercise-checklist">
           {exercises.map((ex) => (
-            <label key={ex.id} className="ex-check">
+            <label key={ex.id} className={`ex-check ${inscribingId === ex.id ? 'inscribing' : ''}`}>
               <input
                 type="checkbox"
                 checked={tmplExercises.includes(ex.id)}
