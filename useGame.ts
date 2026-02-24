@@ -35,12 +35,46 @@ function uid(): string {
 
 const MAX_RECENT_SETS_PER_EXERCISE = 5;
 
+function normalizeExerciseRecord(exerciseId: string, record?: Partial<ExerciseRecord>): ExerciseRecord {
+  const legacy = record as Partial<ExerciseRecord> & { bestWeight?: number };
+  return {
+    exerciseId,
+    lastUsedAt: typeof record?.lastUsedAt === 'number' ? record.lastUsedAt : 0,
+    recentSets: Array.isArray(record?.recentSets) ? record.recentSets : [],
+    topSetWeight: typeof record?.topSetWeight === 'number'
+      ? record.topSetWeight
+      : (typeof legacy.bestWeight === 'number' ? legacy.bestWeight : 0),
+    topSetReps: typeof record?.topSetReps === 'number' ? record.topSetReps : 0,
+    prWeight: typeof record?.prWeight === 'number'
+      ? record.prWeight
+      : (typeof legacy.bestWeight === 'number' ? legacy.bestWeight : 0),
+    prReps: typeof record?.prReps === 'number' ? record.prReps : 0,
+    bestSetVolume: typeof record?.bestSetVolume === 'number' ? record.bestSetVolume : 0,
+    bestWorkoutVolume: typeof record?.bestWorkoutVolume === 'number' ? record.bestWorkoutVolume : 0,
+    bestWorkoutId: record?.bestWorkoutId,
+  };
+}
+
+function isBetterWeightRep(candidate: { weight: number; reps: number } | null, current: { weight: number; reps: number } | null): boolean {
+  if (!candidate) return false;
+  if (!current) return true;
+  if (candidate.weight > current.weight) return true;
+  if (candidate.weight < current.weight) return false;
+  return candidate.reps > current.reps;
+}
+
 function normalizePlayerState(player: PlayerState): PlayerState {
   const legacy = player as PlayerState & Partial<Pick<PlayerState, 'bestWorkoutVolume' | 'exerciseRecords'>>;
+  const normalizedRecords = Object.fromEntries(
+    Object.entries(legacy.exerciseRecords ?? {}).map(([exerciseId, record]) => [
+      exerciseId,
+      normalizeExerciseRecord(exerciseId, record as Partial<ExerciseRecord>),
+    ]),
+  );
   return {
     ...player,
     bestWorkoutVolume: typeof legacy.bestWorkoutVolume === 'number' ? legacy.bestWorkoutVolume : 0,
-    exerciseRecords: legacy.exerciseRecords ?? {},
+    exerciseRecords: normalizedRecords,
   };
 }
 
@@ -275,46 +309,77 @@ export function useGame(): UseGameReturn {
 
     // Level up
     const { newPlayer: playerAfterXP, levelsGained } = applyXP(player, breakdown.total);
-    const updatedExerciseRecords: Record<string, ExerciseRecord> = {
-      ...(player.exerciseRecords ?? {}),
-    };
-    const setsByExercise = workout.sets.reduce<Record<string, SetLog[]>>((acc, set) => {
-      if (!acc[set.exerciseId]) acc[set.exerciseId] = [];
-      acc[set.exerciseId].push(set);
-      return acc;
-    }, {});
-    Object.entries(setsByExercise).forEach(([exerciseId, sets]) => {
-      const existing = updatedExerciseRecords[exerciseId] ?? {
-        exerciseId,
-        lastUsedAt: 0,
-        recentSets: [],
-        bestWeight: 0,
-        bestSetVolume: 0,
-        bestWorkoutVolume: 0,
+    let updatedExerciseRecords: Record<string, ExerciseRecord>;
+    try {
+      updatedExerciseRecords = {
+        ...(player.exerciseRecords ?? {}),
       };
-      const topWeight = sets.reduce((m, s) => Math.max(m, s.weight), 0);
-      const topSetVolume = sets.reduce((m, s) => Math.max(m, s.reps * s.weight), 0);
-      const exerciseWorkoutVolume = sets.reduce((sum, s) => sum + s.reps * s.weight, 0);
-      const appendedRecent = sets.map((s) => ({
-        reps: s.reps,
-        weight: s.weight,
-        volume: s.reps * s.weight,
-        timestamp: s.timestamp,
-        workoutId: workout.id,
-      }));
-      const mergedRecent = [...appendedRecent, ...existing.recentSets]
-        .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(0, MAX_RECENT_SETS_PER_EXERCISE);
-      updatedExerciseRecords[exerciseId] = {
-        ...existing,
-        lastUsedAt: Date.now(),
-        recentSets: mergedRecent,
-        bestWeight: Math.max(existing.bestWeight, topWeight),
-        bestSetVolume: Math.max(existing.bestSetVolume, topSetVolume),
-        bestWorkoutVolume: Math.max(existing.bestWorkoutVolume, exerciseWorkoutVolume),
-        bestWorkoutId: exerciseWorkoutVolume >= existing.bestWorkoutVolume ? workout.id : existing.bestWorkoutId,
-      };
-    });
+      const setsByExercise = workout.sets.reduce<Record<string, SetLog[]>>((acc, set) => {
+        if (!acc[set.exerciseId]) acc[set.exerciseId] = [];
+        acc[set.exerciseId].push(set);
+        return acc;
+      }, {});
+      Object.entries(setsByExercise).forEach(([exerciseId, sets]) => {
+        const existing = normalizeExerciseRecord(exerciseId, updatedExerciseRecords[exerciseId]);
+        const exercise = exercises.find((ex) => ex.id === exerciseId);
+        const isCompound = exercise?.category === 'compound';
+        const prevTopSet = {
+          weight: typeof existing.topSetWeight === 'number' ? existing.topSetWeight : 0,
+          reps: typeof existing.topSetReps === 'number' ? existing.topSetReps : 0,
+        };
+        const prevPR = {
+          weight: typeof existing.prWeight === 'number' ? existing.prWeight : 0,
+          reps: typeof existing.prReps === 'number' ? existing.prReps : 0,
+        };
+        const prevBestSetVolume = typeof existing.bestSetVolume === 'number' ? existing.bestSetVolume : 0;
+        const prevBestWorkoutVolume = typeof existing.bestWorkoutVolume === 'number' ? existing.bestWorkoutVolume : 0;
+        const topSetVolume = sets.reduce((m, s) => Math.max(m, s.reps * s.weight), 0);
+        const exerciseWorkoutVolume = sets.reduce((sum, s) => sum + s.reps * s.weight, 0);
+        const topSetCandidate = sets
+          .filter((s) => Number.isFinite(s.reps) && Number.isFinite(s.weight) && s.reps >= 3)
+          .reduce<{ weight: number; reps: number } | null>((best, s) => {
+            const candidate = { weight: s.weight, reps: s.reps };
+            return isBetterWeightRep(candidate, best) ? candidate : best;
+          }, null);
+        const prCandidate = isCompound
+          ? sets
+              .filter((s) => Number.isFinite(s.reps) && Number.isFinite(s.weight) && s.reps <= 2)
+              .reduce<{ weight: number; reps: number } | null>((best, s) => {
+                const candidate = { weight: s.weight, reps: s.reps };
+                return isBetterWeightRep(candidate, best) ? candidate : best;
+              }, null)
+          : null;
+        const nextTopSet = isBetterWeightRep(topSetCandidate, prevTopSet) ? (topSetCandidate ?? prevTopSet) : prevTopSet;
+        const nextPR = isCompound && isBetterWeightRep(prCandidate, prevPR) ? (prCandidate ?? prevPR) : prevPR;
+        const appendedRecent = sets
+          .filter((s) => Number.isFinite(s.reps) && Number.isFinite(s.weight) && Number.isFinite(s.timestamp))
+          .map((s) => ({
+            reps: s.reps,
+            weight: s.weight,
+            volume: s.reps * s.weight,
+            timestamp: s.timestamp,
+            workoutId: workout.id,
+          }));
+        const mergedRecent = [...appendedRecent, ...existing.recentSets]
+          .sort((a, b) => b.timestamp - a.timestamp)
+          .slice(0, MAX_RECENT_SETS_PER_EXERCISE);
+        updatedExerciseRecords[exerciseId] = {
+          ...existing,
+          lastUsedAt: Date.now(),
+          recentSets: mergedRecent,
+          topSetWeight: nextTopSet.weight,
+          topSetReps: nextTopSet.reps,
+          prWeight: nextPR.weight,
+          prReps: nextPR.reps,
+          bestSetVolume: Math.max(prevBestSetVolume, topSetVolume),
+          bestWorkoutVolume: Math.max(prevBestWorkoutVolume, exerciseWorkoutVolume),
+          bestWorkoutId: exerciseWorkoutVolume >= prevBestWorkoutVolume ? workout.id : existing.bestWorkoutId,
+        };
+      });
+    } catch {
+      // Never let memory/PR updates block workout completion.
+      updatedExerciseRecords = player.exerciseRecords ?? {};
+    }
     const isPersonalBest = totalVolume > (player.bestWorkoutVolume ?? 0);
     const finalPlayer: PlayerState = {
       ...playerAfterXP,

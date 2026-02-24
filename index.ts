@@ -90,7 +90,10 @@ export interface ExerciseRecord {
   exerciseId: string;
   lastUsedAt: number;
   recentSets: ExerciseMemorySet[];
-  bestWeight: number;
+  topSetWeight: number;
+  topSetReps: number;
+  prWeight: number;
+  prReps: number;
   bestSetVolume: number;
   bestWorkoutVolume: number;
   bestWorkoutId?: string;

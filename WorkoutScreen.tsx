@@ -17,14 +17,19 @@ function toDraftNumber(value: string): number | '' {
   return Number.isFinite(parsed) ? parsed : '';
 }
 
+function formatWeightDisplay(weight: number): string {
+  const rounded = Math.round(weight * 100) / 100;
+  if (Number.isInteger(rounded)) return String(rounded);
+  return String(rounded).replace(/(\.\d*?[1-9])0+$/, '$1');
+}
+
 export function WorkoutScreen({ game, onBack }: Props) {
   const {
-    exercises, templates, activeWorkout,
+    exercises, templates, activeWorkout, workoutHistory,
     addExercise, addTemplate, removeTemplate,
     startTrialWithTemplates, setActiveTemplate,
     addSet, removeSet, getDraft, setDraft,
     completeWorkout, cancelWorkout, inscribingId,
-    exerciseRecords,
   } = game;
 
   const [view, setView] = useState<'menu' | 'chooseTemplates' | 'newTemplate' | 'addExercise'>('menu');
@@ -126,11 +131,44 @@ export function WorkoutScreen({ game, onBack }: Props) {
   if (activeWorkout) {
     const totalVolume = activeWorkout.sets.reduce((sum, s) => sum + s.reps * s.weight, 0);
     const activeTemplateVolume = visibleSets.reduce((sum, s) => sum + s.reps * s.weight, 0);
-    const selectedExerciseRecord = selectedExerciseId ? exerciseRecords[selectedExerciseId] : null;
-    const selectedExerciseName = selectedExerciseId ? exMap.get(selectedExerciseId)?.name ?? 'Unknown Exercise' : null;
-    const lastSessionWorkoutId = selectedExerciseRecord?.recentSets[0]?.workoutId ?? null;
-    const lastSessionSets = lastSessionWorkoutId
-      ? selectedExerciseRecord?.recentSets.filter((set) => set.workoutId === lastSessionWorkoutId) ?? []
+    const selectedExercise = selectedExerciseId ? exMap.get(selectedExerciseId) : undefined;
+    const selectedExerciseIsCompound = selectedExercise?.category === 'compound';
+    const selectedExerciseName = selectedExerciseId ? selectedExercise?.name ?? 'Unknown Exercise' : null;
+    const selectedExerciseHistoryWorkouts = selectedExerciseId
+      ? workoutHistory.filter((workout) => workout.sets.some((set) => set.exerciseId === selectedExerciseId))
+      : [];
+    const selectedExerciseHistorySets = selectedExerciseId
+      ? selectedExerciseHistoryWorkouts.flatMap((workout) =>
+          workout.sets
+            .filter((set) => set.exerciseId === selectedExerciseId)
+            .map((set) => ({ ...set, workoutId: workout.id })),
+        )
+      : [];
+    const hasExerciseHistory = selectedExerciseHistorySets.length > 0;
+    const lastUsedAt = hasExerciseHistory
+      ? selectedExerciseHistorySets.reduce((latest, set) => Math.max(latest, set.timestamp), 0)
+      : 0;
+    const topSet = selectedExerciseHistorySets
+      .filter((set) => set.reps >= 3)
+      .reduce<{ weight: number; reps: number } | null>((best, set) => {
+        if (!best) return { weight: set.weight, reps: set.reps };
+        if (set.weight > best.weight) return { weight: set.weight, reps: set.reps };
+        if (set.weight === best.weight && set.reps > best.reps) return { weight: set.weight, reps: set.reps };
+        return best;
+      }, null);
+    const prSet = selectedExerciseIsCompound
+      ? selectedExerciseHistorySets
+          .filter((set) => set.reps <= 2)
+          .reduce<{ weight: number; reps: number } | null>((best, set) => {
+            if (!best) return { weight: set.weight, reps: set.reps };
+            if (set.weight > best.weight) return { weight: set.weight, reps: set.reps };
+            if (set.weight === best.weight && set.reps > best.reps) return { weight: set.weight, reps: set.reps };
+            return best;
+          }, null)
+      : null;
+    const lastSessionWorkout = selectedExerciseHistoryWorkouts[0] ?? null;
+    const lastSessionSets = lastSessionWorkout && selectedExerciseId
+      ? lastSessionWorkout.sets.filter((set) => set.exerciseId === selectedExerciseId)
       : [];
 
     return (
@@ -180,27 +218,33 @@ export function WorkoutScreen({ game, onBack }: Props) {
         {selectedExerciseName && (
           <section className="exercise-memory-panel">
             <div className="section-label">MEMORY: {selectedExerciseName.toUpperCase()}</div>
-            {selectedExerciseRecord ? (
+            {hasExerciseHistory ? (
               <>
                 <div className="memory-row">
                   <span>Last Used</span>
-                  <b>{new Date(selectedExerciseRecord.lastUsedAt).toLocaleDateString()}</b>
+                  <b>{new Date(lastUsedAt).toLocaleDateString()}</b>
                 </div>
                 <div className="memory-row">
-                  <span>PR Weight</span>
-                  <b>{selectedExerciseRecord.bestWeight.toFixed(1)} kg</b>
+                  <span>Top Set (3+ reps)</span>
+                  <b>
+                    {topSet
+                      ? `${formatWeightDisplay(topSet.weight)}kg x ${topSet.reps}`
+                      : 'No top set yet'}
+                  </b>
                 </div>
-                <div className="memory-row">
-                  <span>Best Set Volume</span>
-                  <b>{selectedExerciseRecord.bestSetVolume.toFixed(0)}</b>
-                </div>
-                <div className="memory-row">
-                  <span>Best Workout Volume</span>
-                  <b>{selectedExerciseRecord.bestWorkoutVolume.toFixed(0)}</b>
-                </div>
+                {selectedExerciseIsCompound && (
+                  <div className="memory-row">
+                    <span>PR (1-2 reps)</span>
+                    <b>
+                      {prSet
+                        ? `${formatWeightDisplay(prSet.weight)}kg x ${prSet.reps}`
+                        : 'No PR yet'}
+                    </b>
+                  </div>
+                )}
                 <div className="memory-subtitle">Last Session Comparison</div>
                 {lastSessionSets.map((set, i) => (
-                  <div key={`${set.workoutId}-${set.timestamp}-${i}`} className="memory-row">
+                  <div key={`${lastSessionWorkout?.id ?? 'session'}-${set.timestamp}-${i}`} className="memory-row">
                     <span>{new Date(set.timestamp).toLocaleDateString()}</span>
                     <b>{set.reps} x {set.weight}kg</b>
                   </div>
