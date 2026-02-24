@@ -1,9 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { PlayerState, Workout, Exercise, BossWeek, SetLog, WorkoutTemplate } from './index';
+import type {
+  PlayerState,
+  Workout,
+  Exercise,
+  BossWeek,
+  SetLog,
+  WorkoutTemplate,
+  DraftKey,
+  DraftValue,
+} from './index';
 import {
   getPlayer, savePlayer, getAllExercises, saveExercise,
   getAllTemplates, saveTemplate, deleteTemplate,
-  getWorkout, saveWorkout, getAllWorkouts,
+  saveWorkout, getAllWorkouts,
   getBossWeek, saveBossWeek,
   appendEvent, exportData, downloadJSON, importFromFile,
 } from './db';
@@ -46,9 +55,13 @@ export interface UseGameReturn {
   removeTemplate: (id: string) => Promise<void>;
 
   // Workout flow
-  startWorkout: (name: string, templateId?: string) => void;
+  startTrialWithTemplates: (templateIds: string[], name?: string) => void;
+  setActiveTemplate: (templateId: string) => void;
   addSet: (exerciseId: string, reps: number, weight: number) => void;
   removeSet: (setId: string) => void;
+  getDraft: (key: DraftKey) => DraftValue | null;
+  setDraft: (key: DraftKey, partial: Partial<DraftValue>) => void;
+  clearDraft: (key: DraftKey) => void;
   completeWorkout: () => Promise<void>;
   cancelWorkout: () => void;
 
@@ -67,6 +80,7 @@ export function useGame(): UseGameReturn {
   const [loading, setLoading] = useState(true);
   const [lastXPGain, setLastXPGain] = useState<number | null>(null);
   const [doubleXPTriggered, setDoubleXPTriggered] = useState(false);
+  const [drafts, setDrafts] = useState<Record<string, DraftValue>>({});
   const activeRef = useRef<Workout | null>(null);
   activeRef.current = activeWorkout;
 
@@ -130,21 +144,87 @@ export function useGame(): UseGameReturn {
 
   // ── Workout flow ──────────────────────────────────────────────────────────
 
-  const startWorkout = useCallback((name: string, templateId?: string) => {
-    const workout: Workout = { id: uid(), name, templateId, sets: [], startedAt: Date.now() };
+  const startTrialWithTemplates = useCallback((templateIds: string[], name?: string) => {
+    const validTemplateIds = Array.from(new Set(templateIds))
+      .filter((id) => templates.some((t) => t.id === id));
+    if (validTemplateIds.length === 0) return;
+    const sessionName = name?.trim()
+      || (validTemplateIds.length === 1
+        ? (templates.find((t) => t.id === validTemplateIds[0])?.name ?? `Session ${new Date().toLocaleDateString()}`)
+        : `Session ${new Date().toLocaleDateString()}`);
+    const workout: Workout = {
+      id: uid(),
+      name: sessionName,
+      selectedTemplateIds: validTemplateIds,
+      activeTemplateId: validTemplateIds[0],
+      sets: [],
+      startedAt: Date.now(),
+    };
     setActiveWorkout(workout);
+    activeRef.current = workout;
+    void saveWorkout(workout);
+  }, [templates]);
+
+  const setActiveTemplate = useCallback((templateId: string) => {
+    const workout = activeRef.current;
+    if (!workout || !workout.selectedTemplateIds.includes(templateId)) return;
+    if (workout.activeTemplateId === templateId) return;
+    const updated: Workout = { ...workout, activeTemplateId: templateId };
+    setActiveWorkout(updated);
+    activeRef.current = updated;
+    void saveWorkout(updated);
   }, []);
 
   const addSet = useCallback((exerciseId: string, reps: number, weight: number) => {
-    const newSet: SetLog = { id: uid(), exerciseId, reps, weight, timestamp: Date.now() };
-    setActiveWorkout((prev) => prev ? { ...prev, sets: [...prev.sets, newSet] } : prev);
+    const workout = activeRef.current;
+    if (!workout || !workout.activeTemplateId) return;
+    const newSet: SetLog = {
+      id: uid(),
+      exerciseId,
+      reps,
+      weight,
+      templateId: workout.activeTemplateId,
+      timestamp: Date.now(),
+    };
+    const updated: Workout = { ...workout, sets: [...workout.sets, newSet] };
+    setActiveWorkout(updated);
+    activeRef.current = updated;
+    void saveWorkout(updated);
     if (player) {
       appendEvent({ id: uid(), type: 'SET_LOGGED', timestamp: Date.now(), workoutId: activeRef.current?.id ?? '', setId: newSet.id, exerciseId, reps, weight });
     }
   }, [player]);
 
   const removeSet = useCallback((setId: string) => {
-    setActiveWorkout((prev) => prev ? { ...prev, sets: prev.sets.filter((s) => s.id !== setId) } : prev);
+    const workout = activeRef.current;
+    if (!workout) return;
+    const updated: Workout = { ...workout, sets: workout.sets.filter((s) => s.id !== setId) };
+    setActiveWorkout(updated);
+    activeRef.current = updated;
+    void saveWorkout(updated);
+  }, []);
+
+  const getDraft = useCallback((key: DraftKey): DraftValue | null => {
+    return drafts[key] ?? null;
+  }, [drafts]);
+
+  const setDraft = useCallback((key: DraftKey, partial: Partial<DraftValue>) => {
+    setDrafts((prev) => {
+      const current = prev[key] ?? { reps: '', weight: '', updatedAt: Date.now() };
+      return {
+        ...prev,
+        [key]: { ...current, ...partial, updatedAt: partial.updatedAt ?? Date.now() },
+      };
+    });
+  }, []);
+
+  const clearDraft = useCallback((key: DraftKey) => {
+    setDrafts((prev) => {
+      if (!(key in prev)) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
   }, []);
 
   const completeWorkout = useCallback(async () => {
@@ -230,7 +310,19 @@ export function useGame(): UseGameReturn {
     setTimeout(() => { setLastXPGain(null); setDoubleXPTriggered(false); }, 4000);
   }, [player, boss, exercises]);
 
-  const cancelWorkout = useCallback(() => setActiveWorkout(null), []);
+  const cancelWorkout = useCallback(() => {
+    const workoutId = activeRef.current?.id;
+    setActiveWorkout(null);
+    activeRef.current = null;
+    if (workoutId) {
+      setDrafts((prev) => {
+        const next = Object.fromEntries(
+          Object.entries(prev).filter(([key]) => !key.startsWith(`${workoutId}:`)),
+        );
+        return next;
+      });
+    }
+  }, []);
 
   // ── Export / Import ───────────────────────────────────────────────────────
 
@@ -248,7 +340,8 @@ export function useGame(): UseGameReturn {
     player, boss, exercises, templates, activeWorkout,
     workoutHistory, loading, lastXPGain, doubleXPTriggered,
     spendStat, addExercise, addTemplate, removeTemplate,
-    startWorkout, addSet, removeSet, completeWorkout, cancelWorkout,
+    startTrialWithTemplates, setActiveTemplate, addSet, removeSet,
+    getDraft, setDraft, clearDraft, completeWorkout, cancelWorkout,
     exportSave, importSave,
   };
 }

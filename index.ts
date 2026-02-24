@@ -23,6 +23,7 @@ export interface SetLog {
   exerciseId: string;
   reps: number;
   weight: number; // kg
+  templateId: string;
   timestamp: number;
 }
 
@@ -35,13 +36,22 @@ export interface WorkoutTemplate {
 
 export interface Workout {
   id: string;
-  templateId?: string;
   name: string;
+  selectedTemplateIds: string[];
+  activeTemplateId: string | null;
   sets: SetLog[];
   startedAt: number;
   completedAt?: number;
   xpAwarded?: number;
   damageDealt?: number;
+}
+
+export type DraftKey = `${string}:${string}:${string}`;
+
+export interface DraftValue {
+  reps: number | '';
+  weight: number | '';
+  updatedAt: number;
 }
 
 export interface PlayerAttributes {
