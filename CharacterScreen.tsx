@@ -87,6 +87,7 @@ type DetailKey = keyof typeof DETAIL_COPY;
 export function CharacterScreen({ game }: Props) {
   const { player, spendStat, workoutHistory, exercises, inscribingId } = game;
   const [selectedDetail, setSelectedDetail] = useState<DetailKey | null>(null);
+  const [isCodexOpen, setIsCodexOpen] = useState(false);
   if (!player) return null;
 
   const progress = getLevelProgress(player);
@@ -188,15 +189,22 @@ export function CharacterScreen({ game }: Props) {
       )}
 
       <section className="section">
-        <div className="section-label">EXERCISE CODEX</div>
-        <div className="exercise-checklist">
-          {exercises.map((ex) => (
-            <div key={ex.id} className={`ex-check ${inscribingId === ex.id ? 'inscribing' : ''}`}>
-              <span>{ex.name} <em>[{ex.category}]</em></span>
-            </div>
-          ))}
-          {exercises.length === 0 && <p className="empty-hint">No exercises inscribed yet.</p>}
+        <div className="section-label">
+          EXERCISE CODEX
+          <button className="ghost-btn" type="button" onClick={() => setIsCodexOpen((prev) => !prev)}>
+            {isCodexOpen ? 'Hide' : 'Reveal'}
+          </button>
         </div>
+        {isCodexOpen && (
+          <div className="exercise-checklist">
+            {exercises.map((ex) => (
+              <div key={ex.id} className={`ex-check ${inscribingId === ex.id ? 'inscribing' : ''}`}>
+                <span>{ex.name} <em>[{ex.category}]</em></span>
+              </div>
+            ))}
+            {exercises.length === 0 && <p className="empty-hint">No exercises inscribed yet.</p>}
+          </div>
+        )}
       </section>
 
       {player.badges.length > 0 && (
