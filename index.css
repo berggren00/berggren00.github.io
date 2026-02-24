@@ -920,6 +920,41 @@ body {
 .derived-item span { color: var(--text-dim); }
 .derived-item b { color: var(--text); font-family: var(--font-title); font-size: 14px; }
 
+.clickable-stat {
+  cursor: pointer;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+
+.clickable-stat:hover {
+  border-color: var(--gold-dim);
+  background: #17120c;
+}
+
+.details-box {
+  background: #120f0b;
+  border: 1px solid var(--gold-dim);
+  padding: 12px;
+  gap: 10px;
+}
+
+.details-title {
+  font-family: var(--font-title);
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--gold);
+}
+
+.details-text {
+  color: var(--text);
+  line-height: 1.4;
+  font-size: 14px;
+}
+
+.details-popup {
+  border-color: var(--gold-dim);
+  background: #120f0b;
+}
+
 .badge-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .badge-chip {
   background: #1a140a;
