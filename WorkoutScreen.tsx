@@ -61,15 +61,6 @@ export function WorkoutScreen({ game, onBack }: Props) {
     : [];
   const exMap = new Map(exercises.map((e) => [e.id, e]));
 
-  const visibleSets = activeWorkout && activeTemplateId
-    ? activeWorkout.sets.filter((s) => s.templateId === activeTemplateId)
-    : [];
-  const groupedSets = visibleSets.reduce<Record<string, typeof visibleSets>>((acc, s) => {
-    if (!acc[s.exerciseId]) acc[s.exerciseId] = [];
-    acc[s.exerciseId].push(s);
-    return acc;
-  }, {});
-
   const draftKey: DraftKey | null = activeWorkout && activeTemplateId && selectedExerciseId
     ? `${activeWorkout.id}:${activeTemplateId}:${selectedExerciseId}`
     : null;
@@ -130,12 +121,22 @@ export function WorkoutScreen({ game, onBack }: Props) {
   // Active workout
   if (activeWorkout) {
     const totalVolume = activeWorkout.sets.reduce((sum, s) => sum + s.reps * s.weight, 0);
-    const activeTemplateVolume = visibleSets.reduce((sum, s) => sum + s.reps * s.weight, 0);
+    const activeTemplateVolume = activeWorkout.sets
+      .filter((s) => s.templateId === activeTemplateId)
+      .reduce((sum, s) => sum + s.reps * s.weight, 0);
     const selectedExercise = selectedExerciseId ? exMap.get(selectedExerciseId) : undefined;
     const selectedExerciseIsCompound = selectedExercise?.category === 'compound';
     const selectedExerciseName = selectedExerciseId ? selectedExercise?.name ?? 'Unknown Exercise' : null;
     const selectedExerciseHistoryWorkouts = selectedExerciseId
-      ? workoutHistory.filter((workout) => workout.sets.some((set) => set.exerciseId === selectedExerciseId))
+      ? [activeWorkout, ...workoutHistory]
+          .filter((workout): workout is NonNullable<typeof workout> =>
+            !!workout && workout.sets.some((set) => set.exerciseId === selectedExerciseId),
+          )
+          .sort((a, b) => {
+            const aTs = a.completedAt ?? a.startedAt ?? 0;
+            const bTs = b.completedAt ?? b.startedAt ?? 0;
+            return bTs - aTs;
+          })
       : [];
     const selectedExerciseHistorySets = selectedExerciseId
       ? selectedExerciseHistoryWorkouts.flatMap((workout) =>
@@ -296,28 +297,6 @@ export function WorkoutScreen({ game, onBack }: Props) {
             </form>
           </div>
         )}
-
-        <section className="sets-log">
-          <div className="section-label">
-            {activeTemplate?.name ?? 'Template'} - {visibleSets.length} sets
-          </div>
-          {Object.entries(groupedSets).map(([exId, sets]) => (
-            <div key={exId} className="exercise-group">
-              <div className="exercise-group-name">{exMap.get(exId)?.name ?? 'Unknown Exercise'}</div>
-              {sets.map((s, i) => (
-                <div key={s.id} className="set-row">
-                  <span className="set-num">{i + 1}</span>
-                  <span>{s.reps} x {s.weight}kg</span>
-                  <span className="set-vol">vol {(s.reps * s.weight).toFixed(0)}</span>
-                  <button className="remove-btn" onClick={() => removeSet(s.id)}>X</button>
-                </div>
-              ))}
-            </div>
-          ))}
-          {visibleSets.length === 0 && (
-            <p className="empty-hint">No sets logged for this template yet.</p>
-          )}
-        </section>
 
         <div className="workout-footer">
           <div className="total-volume">
